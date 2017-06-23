@@ -1,0 +1,33 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+
+    package="com.tool.sports.com.analysis">
+    <uses-permission android:name="android.permission.BIND_ACCESSIBILITY_SERVICE"/>
+    <uses-permission android:name="android.permission.READ_CALL_LOG"/>
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"/>
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"/>
+    <uses-permission android:name="com.android.browser.permission.READ_HISTORY_BOOKMARKS"/>
+    <uses-permission android:name="android.permission.READ_PROFILE"/>
+    <uses-permission android:name="android.permission.READ_SOCIAL_STREAM"/>
+    <uses-permission android:name="android.permission.READ_USER_DICTIONARY"/>
+    <uses-permission android:name="com.android.alarm.permission.SET_ALARM"/>
+
+    <uses-permission android:name="android.permission.WRITE_CALL_LOG"/>
+    <uses-permission android:name="com.android.browser.permission.WRITE_HISTORY_BOOKMARKS"/>
+    <uses-permission android:name="android.permission.WRITE_PROFILE"/>
+    <uses-permission android:name="android.permission.WRITE_SOCIAL_STREAM"/>
+    <uses-permission android:name="android.permission.WRITE_USER_DICTIONARY"/>
+    <application android:allowBackup="true" android:label="@string/app_name"
+        android:supportsRtl="true">
+        <activity
+            android:name="com.tool.sports.com.analysis.ProcessAnalysis"
+            android:label="@string/app_name"
+             >
+            <intent-filter>
+
+                <action android:name="anaysis.tool.sports.com.analysis.Process" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>
+    </application>
+
+</manifest>

@@ -1,0 +1,300 @@
+====================================================
+=== HOW TO INCLUDE THE LIBRARY INTO YOUR PROJECT ===
+====================================================
+
+[1]
+
+For using i/o and multithreading utilities only, include
+
+bmdx_cpiomt.h
+
+This header depends only on standard C and C++ header files
+and standard OS-specific header files.
+
+
+[2]
+
+For using whole library, the following files must be present/compiled:
+
+vecm_hashx.h
+yk_cx.h
+
+bmdx_cpiomt.h
+bmdx_config.h
+bmdx_main.h - single header for client-side #include
+
+bmdx_main.cpp
+
+IMPORTANT NOTE
+Compilation units, referring in any way to vecm_hashx.h alone,
+without including bmdx configuration header first,
+silently break ODR.
+
+Correct building may be ensured in the following way:
+
+1. Define
+  yk_c_vecm_hashx_H
+globally in the project.
+
+2. For each unit, causing compilation errors
+related to meta, bytes, vecm, yk_c, place
+  #include "bmdx_config.h"
+somewhere at the top.
+
+
+
+=====================
+=== DISPATCHER_MT ===
+=====================
+
+Dispathcher is an object+thread, assisting multiple threads
+  in sending/receiving messages (strings) to each other.
+  For each thread, message slots are created,
+  using the initial text config.
+  During runtime, threads may create/delete slots as necessary.
+
+Slot name:
+  <slot type>_<name root>
+    or
+  |<slot type>_<name root>|<name part 2>[|part 3[|part 4...]]
+
+Second form is, in fact, an array.
+Name root must have at least one character.
+
+Slot types.
+  Pins (containing single value, or no value for output-only pins):
+    po -- output-only pin, message goes directly to the receiver
+    pi -- input-only pin, messages may be overwritten if not pushed in time
+    pbo -- strong-bound call (command) pin, keeps sequence
+      "sender pushes cmd, receiver pops cmd, receiver pushes response, sender pops response"
+    pbi -- strong-bound call input pin on the receiver side,
+      only one command at a time may be processed
+  Queues:
+    qi -- non-blocking input queue for values; on overflow, the new value cannot be pushed
+      (local sender receives an error code, remote sender is not notified)
+    qbi -- strong-bound call (command) input queue on the receiver side; on overflow,
+      a new command will not be pushed, and for both local and remote sender
+      a response with an error message is automatically generated
+    qs -- queue for broadcasting (multiple senders, multiple receivers)
+
+Message format on sender side.
+  1. For client, messages are paramline()-encoded strings.
+    Internally, message may have up to 2 parts (client message + associated binary data),
+    with part length fields.
+  2. Message format on sender side:
+    src = <slot name>; trg = <ADDR>; text = <T>
+    ADDR - destination slot, consisting of concatenated scope, process, thread, slot names.
+      For in-process messages:
+        |LP|<thread name>|<slot name>
+        |LPA|<qs slot name>
+      For inter-process messages:
+        |LM|<process name>|<thread name>|<slot name>
+        |LMA|<qs slot name>
+      For network messages:
+        |R|<host name or address:port>|<process name>|<thread name>|<slot name>
+        |RMA|<host name or address:port>|<qs slot name>
+        |RPA|<host name or address:port>|<process name>|<qs slot name>
+    T - arbitrary data. May be empty.
+  NOTE Process name is supplied by the program. The program is responsible for
+    name uniqueness inside local process, machine or network.
+  NOTE Threads are created/named by the program. Distinct dispatcher instance accepts
+    only unique thread names. The program is responsible for possible name conflicts
+    beyond that single instance.
+  NOTE For dispatcher, "process" and "thread" may be different from
+    CPU-related items. One CPU process may create several dispatcher instances,
+    even in one CPU thread. One CPU thread may represent several dispatcher threads
+    and communicate with several dispatcher instances.
+    This has only one limitation: after sending command message (initiating strong-bound call),
+    the client may not sleep, waiting for response, if the command target is in the same thread.
+
+Message format on the receiver side.
+  src = <ADDR>; trg = <ADDR>; text = <T>[; bin = <D>][; src0 = <ADDR>][; trg0 = <ADDR>]
+    "src" contains source slot as it was specified by the latest resender.
+    "trg" contains target slot address as it was specified by the latest resender.
+    "bin" may appear only if message has binary part, but the client did not supply
+      a container for it. D is a sequence of wide character values in range 0..255.
+      (Each wide character encodes only 1 byte of binary data.)
+    "src0" appears in messages delivered by subscription or from external source.
+      It is the address of the initial message sender.
+    "trg0" appears in messages delivered by subscription or from external source.
+      It is the target slot address specified by primary sender.
+
+Matching of slot names between sender and receiver.
+  1. Slot types corresp. is fixed:
+    po --> pi, qi, qs
+    pbo <--> pbi, qbi
+  2. Slot with type and name root only may send to any slot with
+    corresponding type, exactly same root, with or without
+    any additional name parts.
+  3. Slot with type, name root and additional name parts
+    may send to any slot with corresponding type,
+    exactly same root and exactly same additional name parts.
+
+Overview of slots and threads locking.
+  Inside the dispatcher, 5 types of locks are used.
+
+  1. critsec_t<dispatcher_mt>(cch_session.lkm_ths) - dispatcher instance-global
+    lock for session data.
+    (Session data: threads/slots tree and associated dispatcher-global,
+    thread-global hashes.)
+    Mainly, from one side, session hashes are read to get a reference
+    to particular slot. From other side, slots can be dynamically added
+    and removed (the tree is modified).
+
+  2. critsec_t<dispatcher_mt>(cch_slot.lkd) - locks particular slot object
+    before any read/write access to it, except its constant members (c*).
+    Only one thread at a time works (inside a proxy function)
+    with particular slot (or several slots). Slot locks may be mixed,
+    but, strictly, slot locks are not mixed with session lock (see above).
+
+  3. cref_t<cch_session> - initForCallback-global lock, protecting adding/removing
+    references to/from dispatcher session data.
+    The lock is set automtically for a very short time on:
+      a) thread_proxy object creation, copying, destruction,
+      b) dispatcher_mt object creation, destruction.
+    NOTE Dispather session data object (cch_session) exists until all references
+      are released. dispatcher_mt holds one of them, but its destruction
+      may occur before some other thread exits and releases its session data reference.
+    NOTE In the correctly designed program, the last session data reference 
+      is destroyed beyond any call (i.e. after the last call) to i_dispatcher_mt functions.
+
+  4. cref_t<cch_slot, dispatcher_mt> - process-global lock,
+    protecting adding/removing references to a slot object.
+    The lock is set automtically for a very short time when a slot object reference
+      is copied or deleted. 
+    The lock is freely mixed with all other locks.
+    NOTE Slot references never exist beyond session references.
+      During session data destruction (on releasing the last ref.),
+      all associated hashes/slot references are destroyed. This time,
+      slot reference locks are set together with session data lock.
+
+  5. critsec_t<dispatcher_mt>(cch_session.lkm_nprx) - short process-global lock
+    for proxy objects counting.
+
+dispatcher_mt threads configuration structure.
+  assoc. { <thread name | global param. name>, <thread configuration (tree) | global param. value (anything)> }
+  global param. name: __.+
+  thread name: non-empty, must not start with "__".
+
+  Thread configuration tree.
+
+    (required)
+    slots = |<slot name 1>[|<slot name 2>...]
+      Slot names may be
+        a) in paramline-encoded string form. In array-like names, "|" should be backslashed.
+          Internally, slot names are checked and paramline-de-/reencoded
+          for exact matching in the form of strings.
+        b) in array form (already decoded).
+          Names are checked and encoded into string before use.
+
+    (optional)
+    <slot name> = <slot configuration (tree)>
+      Name must exactly match with re-encoded name from the above list.
+
+    (optional)
+    disp = <true | false (default)>
+      "disp" key may be specified only for one thread.
+      This thread will mediate in delivering LPA, RPA, LMA, RMA messages
+      for qs slots, configured with "input disp = true" 
+      (see slot configuration parameters below).
+
+      Delivery for messages in all threads, in qs slots configured with "delivery = disp":
+
+        a) By default (no thread with disp = true and no automatic delivery period),
+          messages in qs slots with "delivery = disp"
+          are delivered immediately, by source thread i_dispatcher_mt::write() itself.
+          (Same as in slots with "delivery = immediate".)
+
+        b) By disp thread, calling its i_dispatcher_mt::periodic()
+          (by program design).
+          All messages currently in qs queues with "delivery = disp",
+          in all threads, are delivered to recipients.
+
+        c) Same as (b), called by any CPU thread, if it has access
+          to the disp thread's proxy object (again by program design).
+
+        d) By internal dispatcher_mt thread,
+          calling disp thread's periodic(),
+          if automatic delivery period is specified.
+          See global parameter __qsdt below.
+
+      Delivery for messages in any thread's qs slots configured with "delivery = thread":
+
+        e) By the thread O (owning the qs slot),
+          by calling its i_dispatcher_mt::periodic()
+          (by program design).
+
+        f) By any thread A, calling periodic() of the thread O,
+          owning the qs slot, if A has access to O's proxy object
+          (again by program design).
+
+  Configuration parameters for different kinds of slots.
+    qi, qs, qbi (all queues):
+      size = <N>
+        N >= 3 - specific queue size. If not specified,
+          all queues have default size 10, except qi_char with default size 200.
+    qs only:
+      delivery = <"immediate" (default) | "disp" | "thread">
+        "immediate": message is delivered to each subscriber
+          immediately inside write() call for qs.
+        "thread": message is delivered to subscribers
+          on i_dispatcher_mt::periodic() call of the proxy of the thread
+          owning this qs slot.
+        "disp": message is delivered to subscribers
+          on i_dispatcher_mt::periodic() call of the disp thread proxy.
+      input all = <true | false (default)>
+        true - all threads may write messages directly to this qs slot.
+      input disp = <true (default) | false>
+        true - allow writing global messages (LPA, RPA, LMA, RMA) to this qs slot.
+        In this case, slot name must be unique among all dispatcher_mt threads.
+      NOTE If both inputs are false, only qs owner thread may write directly to this qs slot.
+      output = <array of addresses (strings, default: empty list)>
+        - predefined subscribers.
+        Address format: see trg = <ADDR> in message format.
+        Addresses may be
+          a) in paramline-encoded string form. Literal "|" should be backslashed.
+            Internally, addresses are checked and paramline-de-/reencoded before use.
+          b) in array form (already decoded).
+            Addresses are checked and encoded into string before use.
+      output fixed = <true | false (default)>
+        true: any thread can call subscribe() to attach to this qs slot as recipient.
+        false: subscribers list cannot change from predefined value.
+
+Global configuration parameters.
+
+__qsdt = <T (integer, default == -1)>
+
+  On T >= 0, dispatcher_mt starts an internal thread to automatically deliver
+    global qs messages (qs slots with delivery = disp),
+    in all threads.
+    T specifies min. period between calls, in integer microseconds.
+    On T >= 0, having disp thread is not required.
+    If it exists, its periodic() may be used to initiate
+    additional delivery calls between automatic calls.
+
+  On T == -1, automatic periodic delivery is disabled.
+    Messages in qs slots with "delivery = disp"
+    are delivered by disp thread's periodic, or immediately
+    (if no disp thread configured).
+
+__exitmode = <M (integer, default == 1)>
+
+  M == 0
+  ~dispatcher_mt() exits immediately and does not end session.
+  The session is completed automatically:
+    1. (in any order) dispatcher_mt object is released, all client proxy objects are released.
+    2. All internal session threads exit, releasing the remaining session object refs.
+    3. Session object is automatically deleted.
+
+  M == 1 (dflt.)
+  ~dispatcher_mt() resets session flag and exits immediately.
+  The session is completed automatically:
+    1. (in any order) dispatcher_mt object is released, all client proxy objects are released.
+    2. All internal session threads exit, releasing the remaining session object refs.
+    3. Session object is automatically deleted.
+
+  M == 2
+  ~dispatcher_mt() resets session flag, waits for releasing all proxy objects
+    and all internal objects, then exits.
+  NOTE When dispatcher_mt is released in mode 2, the CPU thread, doing that,
+    must not own any proxy object, otherwise deadlock occurs.
