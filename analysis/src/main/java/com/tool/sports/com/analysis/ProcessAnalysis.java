@@ -1,23 +1,19 @@
 package com.tool.sports.com.analysis;
 
-import android.Manifest;
-import android.content.pm.PackageManager;
-import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
-import android.support.v4.app.ActivityCompat;
-import android.support.v4.content.ContextCompat;
+import android.os.Handler;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 
 import com.tool.sports.com.analysis.ECGLib.PipeLine;
 
-import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.File;
 import java.util.Date;
 import java.util.Vector;
+
 
 public class ProcessAnalysis extends AppCompatActivity {
     static String TAG = "testtest";
@@ -34,33 +30,34 @@ public class ProcessAnalysis extends AppCompatActivity {
         pipleline = new PipeLine();
         pipleline.init(250, 5);
     }
-/*
-    private final static int REQUEST_PERMISSION_REQ_CODE = 34; // any 8-bit number
 
-    private boolean _checkPermission() {
-        if (ContextCompat.checkSelfPermission(this.getApplicationContext(), Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
-            // When user pressed Deny and still wants to use this functionality, show the rationale
-            if (ActivityCompat.shouldShowRequestPermissionRationale(this, Manifest.permission.WRITE_EXTERNAL_STORAGE)) {
+    /*
+        private final static int REQUEST_PERMISSION_REQ_CODE = 34; // any 8-bit number
+
+        private boolean _checkPermission() {
+            if (ContextCompat.checkSelfPermission(this.getApplicationContext(), Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
+                // When user pressed Deny and still wants to use this functionality, show the rationale
+                if (ActivityCompat.shouldShowRequestPermissionRationale(this, Manifest.permission.WRITE_EXTERNAL_STORAGE)) {
+                }
+
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                    requestPermissions(new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE}, REQUEST_PERMISSION_REQ_CODE);
+                }
+            }
+            if (ContextCompat.checkSelfPermission(this.getApplicationContext(), Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
+                // When user pressed Deny and still wants to use this functionality, show the rationale
+                if (ActivityCompat.shouldShowRequestPermissionRationale(this, Manifest.permission.READ_EXTERNAL_STORAGE)) {
+                }
+
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                    requestPermissions(new String[]{Manifest.permission.READ_EXTERNAL_STORAGE}, REQUEST_PERMISSION_REQ_CODE);
+                }
             }
 
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                requestPermissions(new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE}, REQUEST_PERMISSION_REQ_CODE);
-            }
+            return false;
         }
-        if (ContextCompat.checkSelfPermission(this.getApplicationContext(), Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
-            // When user pressed Deny and still wants to use this functionality, show the rationale
-            if (ActivityCompat.shouldShowRequestPermissionRationale(this, Manifest.permission.READ_EXTERNAL_STORAGE)) {
-            }
 
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                requestPermissions(new String[]{Manifest.permission.READ_EXTERNAL_STORAGE}, REQUEST_PERMISSION_REQ_CODE);
-            }
-        }
-
-        return false;
-    }
-
-    //*/
+        //*/
     @SuppressWarnings("deprecation")
     public String getFilenameFromTime() {
         Date date = new Date();
@@ -91,6 +88,14 @@ public class ProcessAnalysis extends AppCompatActivity {
         mFileName = getFilenameFromTime();
         Log.d("csvexport", "" + isCSVExport);
     }
+    private String mMacAddress = "";
+    public void startCSVExport(String macAddress) {
+        isCSVExport = true;
+        mMacAddress = macAddress;
+        mFileName = getFilenameFromTime();
+        Log.d("startcsvexport", macAddress+", " + isCSVExport);
+    }
+
 
     public void stopCSVExport() {
         isCSVExport = false;
@@ -131,49 +136,76 @@ public class ProcessAnalysis extends AppCompatActivity {
     Vector<Double> mEcgArray = new Vector<>();
 
     @SuppressWarnings("MismatchedReadAndWriteOfArray")
+
+    String SAVE_DIRECTORY = "Report";
+
+    private String getCalmSaveDirectory() {
+        String strSDCard = Environment.getExternalStorageDirectory().getPath();
+        String strDir = SAVE_DIRECTORY;
+        if(mMacAddress.length()>0){
+            strDir += "/"+ mMacAddress;
+        }
+
+        boolean res = createDirIfNotExists(strDir);
+        Log.d("createdir", "" + res);
+        return strSDCard+"/"+strDir;
+    }
+    Handler handler = new Handler();
+    public void addEcgDataOne(double fData) {
+        mEcgArray.add(fData);
+        Log.d("addEcgDataOne", "" + fData + " queue size: " + mEcgArray.size());
+        handler.postDelayed(calmRunnable, 0);
+    }
+
     public void addEcgData(double[] fData) {
+        for (double aFData : fData) {
+            mEcgArray.add(aFData);
+        }
+        handler.postDelayed(calmRunnable, 0);
+    }
 
-        String saveDirectory = "CALM";
-        String strDownload = Environment.getExternalStorageDirectory().getPath();
-        String state = Environment.getExternalStorageState();
-        strDownload += "/"+saveDirectory;
-        boolean res = createDirIfNotExists(saveDirectory);
-        Log.d("filenameempty",""+res);
+    Runnable calmRunnable = new Runnable() {
+        @Override
+        public void run() {
+            calm();
+        }
+    };
 
-
-        Log.d("filewrite", "testtest: " + strDownload + "   " + state);
-        //          "/sdcard/Download/files"
+    // check queue and start analysis
+    private void calm() {
         int len = mEcgArray.size();
         if (len > 1000) {
+            Log.d("calmness", "" + len + ", isCSV: " + isCSVExport + " ,file: " + this.mFileName);
             double[] tmpEcgData = new double[len];
             for (int i = 0; i < len; i++) {
                 tmpEcgData[i] = mEcgArray.elementAt(i);
             }
+            String strCSVSaveDirectory = getCalmSaveDirectory();
             if (this.isCSVExport)
-                AddEcgData(tmpEcgData, strDownload, this.mFileName);
+                AddEcgData(tmpEcgData, strCSVSaveDirectory, this.mFileName);
             else {
-                if(Static1.isCalmDebug)
-                AddEcgData(tmpEcgData, strDownload, this.mFileName);
-                else
-                    AddEcgData(tmpEcgData, strDownload, "");
+                AddEcgData(tmpEcgData, strCSVSaveDirectory, "");
             }
             mEcgArray.clear();
         }
-
-        //*/
     }
+
     public static boolean createDirIfNotExists(String path) {
         boolean ret = true;
 
-        File file = new File(Environment.getExternalStorageDirectory(), path);
+        File file = new File(Environment.getExternalStorageDirectory(),path);
         if (!file.exists()) {
             if (!file.mkdirs()) {
-                Log.e("TravellerLog :: ", "Problem creating Image folder");
+                Log.e("createdir", "Problem creating Image folder");
                 ret = false;
             }
+        }else{
+            Log.d("createdir", "already exist folder: '"+path+"'");
         }
+
         return ret;
     }
+
     public void startCalm() {
         Log.d(TAG, "Calm");
 
@@ -215,8 +247,8 @@ public class ProcessAnalysis extends AppCompatActivity {
 
 
     public native double calmnessGetResult();
-    public native double HeartRateGetResult();
 
+    public native double HeartRateGetResult();
 
 
     //    public native void TestCallback();

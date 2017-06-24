@@ -343,11 +343,11 @@ int const FILETYPE_ECG = 0;
 int const FILETYPE_RRI = 1;
 int const FILETYPE_CALM = 2;
 
-void saveCSV(MyVector _arrEcg, string _str_dp, string _str_filename, int type = 0) {
+template <class arrayType>
+void saveCSV(arrayType _arrEcg, string _str_dp, string _str_filename, int type = 0) {
     string filename = _str_filename;
-    LOGD("filenameempty: %s, %d", filename.c_str(), filename.length());
+    LOGD("savecsv: dir: %s, filename: %s, nameLen: %d",_str_dp.c_str(), filename.c_str(), filename.length());
     if (filename.length() == 0) {
-        LOGD("filenameempty");
         return;
     }
     switch (type) {
@@ -373,44 +373,10 @@ void saveCSV(MyVector _arrEcg, string _str_dp, string _str_filename, int type = 
         strForFile += "\r\n";
     }
     int fres = file_io::save_bytes(filename.c_str(), strForFile, true);
-    LOGE("filewrite %s %d fres = %d", filename.c_str(), strForFile.length(), fres);
+    LOGD("savecsvresult: file: %s, content length: %d, success: %d", filename.c_str(), strForFile.length(), fres);
     // END file write
 }
 
-void saveCSV(MyArray _arrEcg, string _str_dp, string _str_filename, int type = 0) {
-    string filename = _str_filename;
-
-    if (filename.length() == 0) {
-        LOGD("filenameempty");
-        return;
-    }
-    switch (type) {
-        case FILETYPE_ECG:
-            filename += " ecg.csv";
-            break;
-        case FILETYPE_RRI:
-            filename += " rri.csv";
-            break;
-        case FILETYPE_CALM:
-            filename += " calm.csv";
-            break;
-        default:
-            break;
-    }
-    LOGD("filenameempty: %s, %d", filename.c_str(), filename.length());
-    // BEGIN file write
-    chdir(_str_dp.c_str());
-    int len = _arrEcg.size();
-    string strForFile = "length = " + itocs(len, 12) + "\r\n";
-    strForFile = "";// ignore Length;
-    for (unsigned int i = 0; i < len; i++) {
-        strForFile += ftocs(_arrEcg.at(i), 6, 8);
-        strForFile += "\r\n";
-    }
-    int fres = file_io::save_bytes(filename.c_str(), strForFile, true);
-    LOGE("filenameempty %s %d fres = %d", filename.c_str(), strForFile.length(), fres);
-    // END file write
-}
 
 string dp, filename;
 
@@ -439,7 +405,7 @@ Java_com_tool_sports_com_analysis_ProcessAnalysis_AddEcgData(JNIEnv *env, jobjec
     MyVector vecEcg((unsigned int) size);
 
     env->GetDoubleArrayRegion(fArray, 0, size, &vecEcg[0]);
-    saveCSV(vecEcg, dp, filename, FILETYPE_ECG);
+    saveCSV(vecEcg, dp, filename, FILETYPE_ECG); //ecg
     ecg_data d(250);
     try {
         for (unsigned int i = 0; i < size; i++) {
@@ -449,7 +415,7 @@ Java_com_tool_sports_com_analysis_ProcessAnalysis_AddEcgData(JNIEnv *env, jobjec
         int res = a1.run(false);
 
         int nums = a1.arr_RRI.size();
-        saveCSV(a1.arr_RRI, dp, filename, FILETYPE_RRI);
+        saveCSV(a1.arr_RRI, dp, filename, FILETYPE_RRI); //rri
         LOGEsave("rrisize steven from %d to  %d", size, nums);
         show(a1.arr_RRI, "arr_rri_array");
         calmnessDataSrc(a1.arr_RRI);
