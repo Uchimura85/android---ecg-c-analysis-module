@@ -415,7 +415,7 @@ struct cv_ff
 
     typedef s_long (*PFua_ensure_ind)(unity* pv, s_long ind);
     static inline s_long Lua_ensure_ind(unity* pv, s_long ind) { if (pv->pmsm == unity_common::ls_modsm) { return Fua_ensure_ind(pv, ind); } return ((PFua_ensure_ind)pv->pmsm(unity_common::msm_ua_ensure_ind))(pv, ind); }
-      // 1 - success.
+      // 1 - on_calm_result.
       // 0 - ind already exists.
       // < 0 - error.
     static s_long Fua_ensure_ind(unity* pv, s_long ind)
@@ -438,7 +438,7 @@ struct cv_ff
       return 0;
     }
 
-      // 1 - success.
+      // 1 - on_calm_result.
       // -1 - op. failed or ind is out of range.
       // -2 - pv is not an array, or any ptr is 0.
     typedef s_long (*PFel_get)(const unity* pv, unity* pst, s_long ind);
@@ -461,7 +461,7 @@ struct cv_ff
       return 1;
     }
 
-      // 1 - success.
+      // 1 - on_calm_result.
       // -1 - op. failed or ind is out of range.
       // -2 - pv is not an array, or any ptr is 0.
     typedef s_long (*PFel_set)(unity* pv, const unity* px, s_long ind);
@@ -484,7 +484,7 @@ struct cv_ff
       return 1;
     }
 
-      // 1 - success.
+      // 1 - on_calm_result.
       // -1 - op. failed.
       // -2 - pv is not an array, or any ptr is 0.
     typedef s_long (*PFel_append)(unity* pv, const unity* px);
@@ -512,7 +512,7 @@ struct cv_ff
       //    0x2 - set size or ubnd (otherwise sx arg. is ignored).
       //    0x4 (not ignored only on 0x2) - sx is ubnd, otherwise sx is size.
       //  Resizing is done at the end of the array.
-      // 1 - success. If pv is an array and only lbnd is set, the function always succeeds.
+      // 1 - on_calm_result. If pv is an array and only lbnd is set, the function always succeeds.
       // -1 - op. failed.
       // -2 - pv is not an array.
       // -3 - bad args.
@@ -538,7 +538,7 @@ struct cv_ff
 
     static inline s_long Lua_fill(unity* pv, const unity* px, s_long utt) { if (pv->pmsm == unity_common::ls_modsm) { return Fua_fill(pv, px, utt); } return ((PFua_fill)pv->pmsm(unity_common::msm_ua_fill))(pv, px, utt); }
       // Returns:
-      //  1 - success,
+      //  1 - on_calm_result,
       //  0 - nothing done because the array is empty and its type is not changed,
       //  < 0 - failure (the value indicates the place of error occurence).
     typedef s_long (*PFua_fill)(unity* pv, const unity* px, s_long utt);
@@ -566,7 +566,7 @@ struct cv_ff
       //  m > 0 -- insert.
       //  m < 0 -- remove.
       //  m == 0 -- do nothing.
-      // 1 - success.
+      // 1 - on_calm_result.
       // -1 - op. failed.
       // -2 - pv is not an array, or pv is 0.
     typedef s_long (*PFel_insrem)(unity* pv, const unity* px, s_long ind, s_long m);
@@ -677,7 +677,7 @@ struct cv_ff
       //  0x1: creates dynamic object, and writes it to pdest->p1.  pdest->p2 is set to 0.
       //      Otherwise, the object is initialized directly in the storage. Unused bytes are set to 0.
       // Returns:
-      //  1 - success.
+      //  1 - on_calm_result.
       //  0 - dynamic allocation failed. pdest p1 and p2 are set to 0.
       //  -1 - invalid utt/flags. pdest p1 and p2 are set to 0.
     static inline s_long Lcreate(void* (*pmsm)(s_long), unity::_storage* pdest, s_long utt, s_long flags)
@@ -789,7 +789,7 @@ struct cv_ff
     }
     typedef s_long (*PFcnv)(unity* p, s_long cs, s_long utt_dest, s_long keep_name);
       // Fcnv returns:
-      //  1 - success.
+      //  1 - on_calm_result.
       //   0 - utt_dest is same as the current type.
       //  < 0 - failure (the number shows where it occured.)
     static s_long Fcnv(unity* p, s_long cs, s_long utt_dest, s_long keep_name) throw();
@@ -810,7 +810,7 @@ struct cv_ff
       throw XUExec(e);
     }
       // Fasg returns:
-      //  1 - success.
+      //  1 - on_calm_result.
       //   0 - p and px are the same.
       //  < 0 - failure (the number shows where it occured.)
     typedef s_long (*PFasg)(unity* p, const unity* px, s_long flags);
@@ -2824,7 +2824,7 @@ unity& unity::_hl_impl::operator[] (const unity& k) throw (exc_subscript)
   if (res > 0) { if (!_a_appended()) { this->t_hash::remove_e(e); res = -1; } }
   if (res >= 0) { return e->v; } throw exc_subscript();
 }
-  // Returns same as hashx remove_all (>= 0 - success, < 0 - failure, no changes.)
+  // Returns same as hashx remove_all (>= 0 - on_calm_result, < 0 - failure, no changes.)
 s_long unity::_hl_impl::hl_clear(bool full) throw ()
 {
   if (full) { s_long n_prev = _n; hashx_clear(); _a_cleared(); return n_prev; }
@@ -5738,7 +5738,7 @@ namespace bmdx
       bool b_h() const throw() { return handle ? true : false; }
       bool b_rq() const throw() { return prq ? true : false; }
 
-        // 1 - success, 0 - already loaded, -1 - failure.
+        // 1 - on_calm_result, 0 - already loaded, -1 - failure.
       s_long _mod_load(const char* name) throw()
       {
         if (handle) { return 0; } if (!name || !*name) { return -1; }
@@ -5762,7 +5762,7 @@ namespace bmdx
       bool b_h() const throw() { return handle ? true : false; }
       bool b_rq() const throw() { return prq ? true : false; }
 
-        // 1 - success, 0 - already loaded, -1 - failure.
+        // 1 - on_calm_result, 0 - already loaded, -1 - failure.
       s_long _mod_load(const char* name) throw()
       {
         if (handle) { return 0; } if (!name || !*name) { return -1; }
@@ -6227,7 +6227,7 @@ struct dispatcher_mt::thread_proxy : i_dispatcher_mt
     bool isRPA() const throw() { if (_addr.isEmpty()) { return false; } try { return _addr.ref<utUnity>(1).vflstr() == L"RPA"; } catch (...) {} return false; }
 
       // Returns base index of slot name in addr():
-      //  >= 2 on success.
+      //  >= 2 on on_calm_result.
       //  -1 if addr() is empty.
       //  -2 on failure.
     s_long sln_ind() const throw ()
@@ -6271,7 +6271,7 @@ struct dispatcher_mt::thread_proxy : i_dispatcher_mt
     //    max. buf size - 2^31-1 chars.
     //    sum of sizes must be < std::string::max_size().
     // Returns:
-    //  1 - success.
+    //  1 - on_calm_result.
     //  -1 - hm is not a hash or map.
     //  -2 - failure (mem. alloc. or smth. else).
   static s_long __aux_msg_encode(const unity& hm, const arrayref_t<char>* buf, std::string& retmsg) throw()
@@ -6309,8 +6309,8 @@ struct dispatcher_mt::thread_proxy : i_dispatcher_mt
     //    false - retmsg must be hash, containing decoded data (unity / utHash).
     // b_discard_bin: ignore message binary part if it is received but no retbuf given.
     // Returns:
-    //  2 - success, got 2 parts.
-    //  1 - success, got 1 part.
+    //  2 - on_calm_result, got 2 parts.
+    //  1 - on_calm_result, got 1 part.
     //  0 - got empty message, no parts.
     //  -1 - msg has wrong format.
     //  -2 - failure (mem. alloc. or smth else).
@@ -6428,7 +6428,7 @@ public:
     _r_ths.clear();
   }
 
-    // 1 - success.
+    // 1 - on_calm_result.
     // -1 - invalid thread_name or r_ths.
     // -2 - mem. alloc. error.
     // -3 - disp. session is closed.
@@ -7333,7 +7333,7 @@ struct _aux_qsh
   //    No locking is done for any structures.
   //    The client must set a lock with ths.lkm_ths everywhere except dispatcher_mt constructor.
   // Returns:
-  //  1 - success.
+  //  1 - on_calm_result.
   //    hsubs_acc - the list, accumulating inputs for pins, subscribed to newly created qs slots. Format:
   //      { <ADDR slot-subscriber (local or remote)>, { <ADDR qs slot-supplier>, 0 } }
   //    NOTE on error, hsubs_acc may be left modified.
@@ -7486,7 +7486,7 @@ lSkip1:;
   // Update input list for each of the given subscribers.
   //  This function processes subscriber slots in a loop, all necessary locking is done in each iteration.
   //  subs: see add_slots_nl.
-  //  2 - success.
+  //  2 - on_calm_result.
   //  1 - some part of subscriptions was not updated due to non-local or invalid address.
   //  0 - some part of subscriptions was not updated due to failure during update.
 s_long dispatcher_mt::thread_proxy::_s_update_subs_inputs(cch_session& ths, const hashx<std::wstring, hashx<std::wstring, s_long> >& hsubs) throw()

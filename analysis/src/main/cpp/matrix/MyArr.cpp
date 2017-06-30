@@ -188,6 +188,14 @@ FLOAT max(FLOAT f1, FLOAT f2, FLOAT f3) {
     return r1;
 }
 
+FLOAT min(FLOAT f1, FLOAT f2, FLOAT f3) {
+    FLOAT r1 = 0;
+    if (f1 > f2)r1 = f2;
+    else r1 = f1;
+    if (r1 > f3)r1 = f3;
+    return r1;
+}
+
 int length(My6Array a6) {
     return a6.ar_vlf_sum.size();
 }

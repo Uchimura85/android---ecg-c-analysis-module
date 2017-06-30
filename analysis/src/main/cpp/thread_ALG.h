@@ -73,7 +73,7 @@ struct thread_ALG : threadctl::ctx_base
             res3 = a3.run(gi9 + t_slp_wnd, true, true);
             if (res3 < 0) { break; }
             else if (res3 == 0) { } // still not enough data
-            else  // success
+            else  // on_calm_result
             {
               gi9 += t_slp_wnd; // new time window end pos
 

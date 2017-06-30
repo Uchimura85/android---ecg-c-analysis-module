@@ -25,6 +25,7 @@ FLOAT sum(MyArray a);
 FLOAT sum(FLOAT f1,FLOAT f2,FLOAT f3);
 FLOAT sum(FLOAT f1,FLOAT f2);
 FLOAT max(FLOAT f1,FLOAT f2,FLOAT f3);
+FLOAT min(FLOAT f1, FLOAT f2, FLOAT f3);
 MyArray condition1(MyExArray exArray);
 MyArray condition2(MyExArray exArray);
 MyArray condition3(MyExArray exArray);

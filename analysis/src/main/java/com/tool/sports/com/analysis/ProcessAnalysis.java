@@ -8,17 +8,16 @@ import android.util.Log;
 
 import com.tool.sports.com.analysis.ECGLib.PipeLine;
 
-import org.json.JSONObject;
-
 import java.io.File;
 import java.util.Date;
+import java.util.List;
 import java.util.Vector;
 
 
 public class ProcessAnalysis extends AppCompatActivity {
     static String TAG = "testtest";
-    public static AnalysisListener onAnalysisCallback, onCalmnessCallback;
-    public PipeLine pipleline;
+    public static CalmAnalysisListener onCalmnessCallback;
+    public PipeLine pipeline;
     String mFileName;
 
     // Constructor
@@ -27,8 +26,8 @@ public class ProcessAnalysis extends AppCompatActivity {
 //        _checkPermission();
 
         mFileName = getFilenameFromTime();
-        pipleline = new PipeLine();
-        pipleline.init(250, 5);
+        pipeline = new PipeLine();
+        pipeline.init(250, 5);
     }
 
     /*
@@ -88,12 +87,14 @@ public class ProcessAnalysis extends AppCompatActivity {
         mFileName = getFilenameFromTime();
         Log.d("csvexport", "" + isCSVExport);
     }
+
     private String mMacAddress = "";
+
     public void startCSVExport(String macAddress) {
         isCSVExport = true;
         mMacAddress = macAddress;
         mFileName = getFilenameFromTime();
-        Log.d("startcsvexport", macAddress+", " + isCSVExport);
+        Log.d("startcsvexport", macAddress + ", " + isCSVExport);
     }
 
 
@@ -102,36 +103,11 @@ public class ProcessAnalysis extends AppCompatActivity {
         Log.d("csvexport", "" + isCSVExport);
     }
 
-    public static void setOnAnalysisCallback(AnalysisListener callbacks) {
-        onAnalysisCallback = callbacks;
-    }
 
-    public static void setOnCalmnessCallback(AnalysisListener callbacks) {
+    public static void setOnCalmnessCallback(CalmAnalysisListener callbacks) {
         Log.d("callbackTest", "calmness");
         onCalmnessCallback = callbacks;
     }
-
-    public void startAnalysis() {
-        Log.d(TAG, "startAnalysis" + Static1.nact);
-        String str = cmdline().length() + " [" + cmdline() + "]\r\n";
-        if (Static1.nact == 0) {
-            Static1.nact += 1;
-
-            Th1AnalysisResult thread_result = new Th1AnalysisResult();
-            thread_result.ac = this;
-            thread_result.start();
-
-            Th2Analysis thread_analysis = new Th2Analysis();
-            thread_analysis.ac = this;
-            thread_analysis.start();
-        } else {
-            Log.d("testtest", "nact  " + Static1.nact);
-        }
-    }
-
-    int peakStart = 0;
-    boolean prevbAF = false;
-    int timeOfPrevAF = 0;
 
     Vector<Double> mEcgArray = new Vector<>();
 
@@ -142,26 +118,108 @@ public class ProcessAnalysis extends AppCompatActivity {
     private String getCalmSaveDirectory() {
         String strSDCard = Environment.getExternalStorageDirectory().getPath();
         String strDir = SAVE_DIRECTORY;
-        if(mMacAddress.length()>0){
-            strDir += "/"+ mMacAddress;
+        if (mMacAddress.length() > 0) {
+            strDir += "/" + mMacAddress;
         }
 
         boolean res = createDirIfNotExists(strDir);
         Log.d("createdir", "" + res);
-        return strSDCard+"/"+strDir;
+        return strSDCard + "/" + strDir;
     }
+
     Handler handler = new Handler();
-    public void addEcgDataOne(double fData) {
-        mEcgArray.add(fData);
-        Log.d("addEcgDataOne", "" + fData + " queue size: " + mEcgArray.size());
+
+    private double ecgTransform(int ecgVal) {
+        return (double) ((ecgVal - 1200) / 800f);
+    }
+
+    private int ecg_No_Transform(double ecgVal) {
+        return (int) ((ecgVal) * 800f + 1200);
+    }
+
+    public int addEcgDataOne(int ecgVal) {
+        mEcgArray.add(ecgTransform(ecgVal));
+        Log.d("addEcgDataOne", "" + ecgVal + " queue size: " + mEcgArray.size());
+
+        handler.postDelayed(calmRunnable, 0);
+        return AlgoProcess(ecgVal);
+    }
+
+    public void addEcgData(int[] nArrData) {
+
+        for (int ecgVal : nArrData) {
+            mEcgArray.add(ecgTransform(ecgVal));
+            AlgoProcess(ecgVal);
+        }
         handler.postDelayed(calmRunnable, 0);
     }
 
-    public void addEcgData(double[] fData) {
-        for (double aFData : fData) {
-            mEcgArray.add(aFData);
+    public void addEcgDataDouble(double[] fData) {
+        for (double doubleEcgVal : fData) {
+            mEcgArray.add(doubleEcgVal);
+            AlgoProcess(ecg_No_Transform(doubleEcgVal));
         }
         handler.postDelayed(calmRunnable, 0);
+    }
+
+    boolean prevbAF = false;
+    int timeOfPrevAF = 0;
+    public int sampleCounter = 0;
+    int peakStart = 0;
+
+    public static int IS_UNKNOWN = -1;
+    public static int IS_NORMAL = 0;
+    public static int IS_AF = 1;
+
+
+    public int AlgoProcess(int data) {
+        int strAF_NORMAL_UNKNOWN= IS_UNKNOWN;
+        pipeline.add(data);
+        if (pipeline.isDected()) {
+            String str = "" + pipeline.getHeartRate();
+//            setHRSValueOnView(pipeline.getHeartRate());
+
+            Log.d("Heartrate", str);
+//			bpmView.setText(str);
+            int peakPos = peakStart;
+            Log.d("peakpos", "" + peakPos);
+
+            Boolean bAF = false;
+            if (pipeline.typeClassification.processwaveChars.type == 86 || pipeline.typeClassification.processwaveChars.type == 83 || pipeline.typeClassification.processwaveChars.type == 65)
+                bAF = true;
+
+            if (bAF) {
+                if (!prevbAF) {
+                    timeOfPrevAF = peakStart;
+                }
+            } else {
+                if (prevbAF) {
+                    String AFStart = "" + timeOfPrevAF;
+                    String AFEnd = "" + peakStart;
+                    Log.d("afresult", AFStart + ":" + AFEnd);
+                }
+            }
+            prevbAF = bAF;
+
+            Log.d("af result", "" + peakPos);
+
+
+            String strAFandNormal;
+            if (pipeline.typeClassification.processwaveChars.type == 86 || pipeline.typeClassification.processwaveChars.type == 83 || pipeline.typeClassification.processwaveChars.type == 65) {
+                strAFandNormal = "AF";
+                strAF_NORMAL_UNKNOWN = IS_AF;
+            } else {
+                strAFandNormal = "N";
+                strAF_NORMAL_UNKNOWN = IS_NORMAL;
+            }
+
+            Log.d("Heartrate", "out algo: " + strAFandNormal);
+
+
+            peakStart = sampleCounter;
+        }
+        sampleCounter++;
+        return strAF_NORMAL_UNKNOWN;
     }
 
     Runnable calmRunnable = new Runnable() {
@@ -174,7 +232,7 @@ public class ProcessAnalysis extends AppCompatActivity {
     // check queue and start analysis
     private void calm() {
         int len = mEcgArray.size();
-        if (len > 1000) {
+        if (len >= 3000) {
             Log.d("calmness", "" + len + ", isCSV: " + isCSVExport + " ,file: " + this.mFileName);
             double[] tmpEcgData = new double[len];
             for (int i = 0; i < len; i++) {
@@ -193,14 +251,14 @@ public class ProcessAnalysis extends AppCompatActivity {
     public static boolean createDirIfNotExists(String path) {
         boolean ret = true;
 
-        File file = new File(Environment.getExternalStorageDirectory(),path);
+        File file = new File(Environment.getExternalStorageDirectory(), path);
         if (!file.exists()) {
             if (!file.mkdirs()) {
                 Log.e("createdir", "Problem creating Image folder");
                 ret = false;
             }
-        }else{
-            Log.d("createdir", "already exist folder: '"+path+"'");
+        } else {
+            Log.d("createdir", "already exist folder: '" + path + "'");
         }
 
         return ret;
@@ -263,41 +321,6 @@ public class ProcessAnalysis extends AppCompatActivity {
     }
 }
 
-class Th1AnalysisResult extends Thread {
-
-    ProcessAnalysis ac;
-
-    @SuppressWarnings("InfiniteLoopStatement")
-    public void run() {
-        try {
-            for (; ; ) {
-                try {
-                    String line = ac.stdouterr();
-                    if (line.length() > 0) {
-                        Log.d("coutresult", "file write:" + line);
-                        if (ProcessAnalysis.onAnalysisCallback != null) {
-                            JSONObject json = new JSONObject();
-                            json.put("value", line);
-                            ProcessAnalysis.onAnalysisCallback.success(json);
-                        }
-                    }
-                } catch (Exception e) {
-                    throw new RuntimeException(e);
-                }
-
-                try {
-                    sleep(50);
-                } catch (InterruptedException e) {
-                    Log.e("error", e.toString());
-                }
-            }
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
-    }
-
-}
-
 class Th2CalmResult extends Thread {
 
     ProcessAnalysis ac;
@@ -306,26 +329,16 @@ class Th2CalmResult extends Thread {
     public void run() {
         try {
             for (; ; ) {
-                try {
-                    double calm = ac.calmnessGetResult();
-                    if (ProcessAnalysis.onCalmnessCallback != null && calm != -1) {
-                        Log.d("callbackTest", "callbak ----calm-----run:   " + calm);
-                        JSONObject json = new JSONObject();
-                        json.put("value", calm);
-                        json.put("type", "calm");
-                        ProcessAnalysis.onCalmnessCallback.success(json);
-                    }
-                    double hr = ac.HeartRateGetResult();
-                    if (ProcessAnalysis.onCalmnessCallback != null && hr != -1) {
-                        Log.d("callbackTest", "callbak -----hr----run:   " + hr);
-                        JSONObject json = new JSONObject();
-                        json.put("value", hr);
-                        json.put("type", "hr");
-                        ProcessAnalysis.onCalmnessCallback.success(json);
-                    }
 
-                } catch (Exception e) {
-                    throw new RuntimeException(e);
+                double calm = ac.calmnessGetResult();
+                if (ProcessAnalysis.onCalmnessCallback != null && calm != -1) {
+                    Log.d("callbackTest", "callbak ----calm-----run:   " + calm);
+                    ProcessAnalysis.onCalmnessCallback.on_calm_result(calm);
+                }
+                double hr = ac.HeartRateGetResult();
+                if (ProcessAnalysis.onCalmnessCallback != null && hr != -1) {
+                    Log.d("callbackTest", "callbak -----hr----run:   " + hr);
+                    ProcessAnalysis.onCalmnessCallback.on_heart_rate_result(hr);
                 }
 
                 try {
@@ -356,12 +369,14 @@ class Th3CalmTester extends Thread {
         double[] newData = new double[TestData.data.length * 1];
         for (int i = 0; i < TestData.data.length; i++) {
             for (int j = 0; j < 1; j++) {
-                newData[TestData.data.length * j + i] = (TestData.data[i] - 1200) / 800f;
+//                newData[TestData.data.length * j + i] = (TestData.data[i] - 1200) / 800f;
+                newData[TestData.data.length * j + i] = TestData.data[i];
             }
         }
-        for (int i = 0; i < 30; i++)
-            ac.addEcgData(newData);
-
+        Log.d("steve testtesttest", newData.length + "");
+//        for (int i = 0; i < 30; i++)
+        ac.addEcgDataDouble(newData);
+//        ac.AddRRIData(newData);
         try {
             sleep(3000);
 

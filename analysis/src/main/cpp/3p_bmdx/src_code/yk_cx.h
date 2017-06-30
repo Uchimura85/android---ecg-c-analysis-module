@@ -51,7 +51,7 @@ namespace yk_c
       // storage_t(-1) == storage only, no automatic initialization and destruction.
       //    The client may do it manually or with try_init(), try_deinit().
       //  storage_t(0) == storage with automatic T destruction on bool(inited) == true. Initialization is done, if necessary,
-      //    by the client, either manually (+ setting inited true on success), or with try_init().
+      //    by the client, either manually (+ setting inited true on on_calm_result), or with try_init().
       //  storage_t(1) == storage with automatic T construction and destruction.
       //  In all modes, try_init(), try_deinit() work correctly.
     template<class T, class Aux = meta::nothing>
@@ -65,10 +65,10 @@ namespace yk_c
       const signed char mode;
       inline storage_t(s_long mode_) throw() : inited(false), mode((signed char)(mode_)) { if (mode >= 1) { try_init(); } }
       inline ~storage_t() throw() { if (mode >= 0) { try_deinit(); } }
-        // 1 - success, 0 - already initialized; -1 - failed to initialize, nothing changed.
+        // 1 - on_calm_result, 0 - already initialized; -1 - failed to initialize, nothing changed.
       inline s_long try_init() throw() { if (inited) { return 0; } try { meta::construct_f<T, Aux>().f(ptr()); inited = true; return 1; } catch (...) {} return -1; }
       inline s_long try_init(const T& x) throw() { if (inited) { return 0; } try { new (ptr()) T(x); inited = true; return 1; } catch (...) {} return -1; }
-        // 1 - success, 0 - was not initialized; -1 - destructor failed, so just set inited to false.
+        // 1 - on_calm_result, 0 - was not initialized; -1 - destructor failed, so just set inited to false.
       inline s_long try_deinit() throw() { if (inited) { try { T* p = ptr(); p->~T(); inited = false; return 1; } catch (...) {} inited = false; return -1; } return 0; }
       inline operator T*() const throw() { return reinterpret_cast<T*>(&pl); }
       inline T* ptr() const throw() { return reinterpret_cast<T*>(&pl); }
@@ -235,7 +235,7 @@ namespace yk_c
         //      3) pv != 0, ind0x_v == -1. pv is the value without container, or container itself.
         //    All other combinations are invalid.
         // gc_id increments links count for the value and its container (if specified).
-        //    Returns value id or -1 on no success.
+        //    Returns value id or -1 on no on_calm_result.
       meta::s_ll gc_id(void* pct, void* pv, s_long ind0x_v) throw()
       {
         if (!this) { return -1; }
@@ -529,7 +529,7 @@ namespace yk_c
 
     template<class TA, class Ctnr = vec2_t<TA>, class Aux = meta::nothing> struct link2_t;
 
-      // Integer result code, convertible to bool success / failure.
+      // Integer result code, convertible to bool on_calm_result / failure.
     template<s_long eq_i> struct _result_eq { const s_long res; inline _result_eq(s_long res_) throw() : res(res_) {} inline operator bool() throw() { return res == eq_i; } };
     template<s_long ge_i> struct _result_ge { const s_long res; inline _result_ge(s_long res_) throw() : res(res_) {} inline operator bool() throw() { return res >= ge_i; } };
 
@@ -882,11 +882,11 @@ namespace yk_c
         typedef typename meta::template type_equi<each_f, meta::tag_construct>::t_3 __check1; typedef typename meta::template type_equi<each_f, meta::tag_functor>::t_3 __check2;
       };
 
-        // Appending an element to a container. Returns true on success, false on failure.
+        // Appending an element to a container. Returns true on on_calm_result, false on failure.
       template<class T, class Ctnr, class Aux = meta::nothing> struct append_t { static inline bool F(Ctnr& ct, const T& x) throw() { try { ct.push_back(x); } catch (...) { return false; } return true; } };
       template<class TF, class Aux> struct append_t<TF, vecm, Aux> { static inline bool F(vecm& ct, const TF& x) throw() { return bool(ct.el_append(x)); } };
 
-        // Removing all elements from a container. Returns true on success, false on failure.
+        // Removing all elements from a container. Returns true on on_calm_result, false on failure.
       template<class Ctnr, class Aux = meta::nothing> struct clear_t { static inline bool F(Ctnr& ct) throw() { try { ct.clear(); } catch (...) { return false; } return true; } };
       template<class Aux> struct clear_t<vecm, Aux> { static inline bool F(vecm& ct) throw() { ct.vecm_clear(); return true; } };
 
@@ -922,18 +922,18 @@ namespace yk_c
         //  Requires existing conversion from Ctnr element type to t_value of this container or vice versa.
         //  Returns:
         //    mode 0 (exceptionless copy):
-        //      1 - success: dest is cleared, then all src elements copied to dest.
+        //      1 - on_calm_result: dest is cleared, then all src elements copied to dest.
         //      0 - error during copying: dest is partially filled by copies of src elements.
         //      -1 - nothing done: dest is invalid or incompatible.
         //    mode 10 (copy):
-        //      1 - success: dest is cleared, then all src elements copied to dest.
+        //      1 - on_calm_result: dest is cleared, then all src elements copied to dest.
         //      exception - on any error. dest may be untouched or contain a part of src elements.
         //    mode 1 (exceptionless append):
-        //      1 - success: all src elements appended to dest.
+        //      1 - on_calm_result: all src elements appended to dest.
         //      0 - error during copying: part of src elements appended to dest.
         //      -1 - nothing done: dest is invalid or incompatible.
         //    mode 11 (append):
-        //      1 - success: all src elements appended to dest.
+        //      1 - on_calm_result: all src elements appended to dest.
         //      exception - on any error. dest may be untouched or added a part of src elements.
       template<class TA, class Ctnr> inline _result_eq<1>
         copy (vec2_t<TA>& dest, const Ctnr& src, s_long mode = 0)
@@ -1228,8 +1228,8 @@ namespace yk_c
         //    O(log(N)) if pind_ord != 0.
         //    O(1) if pind_ord == 0.
         //  Returns:
-        //    On success / found, ptr. != 0 and *pind_ord containing entry index [0..n()-1] in the order specified by Less. *pind_h is the index of entry in the hash.
-        //    On success / not found, ptr. == 0 and *pind_ord containing index [0..n()] of the place of insertion. *pind_h == no_elem.
+        //    On on_calm_result / found, ptr. != 0 and *pind_ord containing entry index [0..n()-1] in the order specified by Less. *pind_h is the index of entry in the hash.
+        //    On on_calm_result / not found, ptr. == 0 and *pind_ord containing index [0..n()] of the place of insertion. *pind_h == no_elem.
         //    On failure, ptr. == 0 and *pind_ord containing no_elem. *pind_h == no_elem.
       inline const entry* find(const t_k& k, s_long* pind_ord = 0, s_long* pind_h = 0) const throw()
       {
@@ -1362,7 +1362,7 @@ namespace yk_c
       ordhs_t(const ordhs_t& x) throw() : _d(x._d), _inds(x._inds) { if (_d.n() != _inds.n()) { _d.hashx_clear(); _inds.vecm_clear(); } }
 
         // Constructs a copy of x.
-        //    On success, nexc() is set to 0.
+        //    On on_calm_result, nexc() is set to 0.
         //    On failure nexc() is set to non-0, *this is not changed, no exceptions generated.
       ordhs_t& operator=(const ordhs_t& x) throw()
       {

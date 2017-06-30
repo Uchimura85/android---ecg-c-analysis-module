@@ -603,7 +603,7 @@ namespace bmdx
 
       //Sets strong reference flag, changes reference counts accordingly.
       //  Deletes the object if the last strong ref has gone (transformed into weak).
-      //  Normally, returns true (success).
+      //  Normally, returns true (on_calm_result).
       //  Returns false in the following case: cannot create strong reference
       //  if the object has been deleted already (i.e. objStrongRefsCount() == 0),
     virtual bool objSetStrongRef(bool isStrongRef) = 0;
@@ -748,7 +748,7 @@ namespace bmdx
     //  (new object, copy of object)
     //  interface for particular classes. See i_construction template.
     // Returns:
-    //  1 - success, dest is cleared and then initialized with x.
+    //  1 - on_calm_result, dest is cleared and then initialized with x.
     //  -1 - type of x does not match this->objStatTypeInfo. dest is not changed.
     //  -2 - dest == * this. dest is not changed.
     //  -4 - dest == 0 dest is not changed.
@@ -770,7 +770,7 @@ namespace bmdx
       int nptrs() const { return d ? *((short*)d) : 0; }
       PB& ptr(int ind) const { return *(ind + (PB*)(sizeof(short) + (char*)d)); }
 
-      // NOTE 1: on append success, pi_array takes ownership on the given object (*x).
+      // NOTE 1: on append on_calm_result, pi_array takes ownership on the given object (*x).
       // NOTE 2: insertion succeds only if x has both unique value and type among other pi_array elements.
       // Returns:
       //  1 - appending successful.
@@ -1492,7 +1492,7 @@ namespace bmdx
     template<class Obj> unity(Obj& x, bool isStrongRef)        { ut = utEmpty; pmsm = unity_common::ls_modsm; _data.p1 = 0; _data.p2 = 0; set_obj<Obj, o_interfaces_top<Obj> >(x, isStrongRef); }
 
       // Create a copy of vector with specific base index.
-      //    a) on success: *this contains a copy of x.
+      //    a) on on_calm_result: *this contains a copy of x.
       //    b) on failure: XUExec is generated. *this is set to utEmpty.
       //  NOTE vector and vec2_t with base index 0 can also be created or assigned with 1-argument call.
     template<class T> unity(const std::vector<T>& x, s_long arrlb)        { ut = utEmpty; pmsm = unity_common::ls_modsm; _data.p1 = 0; _data.p2 = 0; *this = x; arrlb_(arrlb); }
@@ -1533,7 +1533,7 @@ namespace bmdx
     template<class T> unity& operator=(const T& x)        { return (*this = trivconv_t<typename meta::nonc_t<T>::t>::F(x)); }
 
       // Array assignment.
-      //  a) on success, the object contains a copy of x.
+      //  a) on on_calm_result, the object contains a copy of x.
       //  b) on failure, XUExec is generated. *this is not changed.
     template<class Ts> unity& operator=(const std::vector<Ts>& src) { _x_asgvec(src, false); return *this; }
     template<class Ts> unity& operator=(const vec2_t<Ts>& src) { _x_asgvec(src, false); return *this; }
@@ -1802,7 +1802,7 @@ namespace bmdx
 
       // Assigns ind-th elem. of the internal array = x, with conversion as necessary.
       //  NOTE Trivial conversions are allowed even on cs == csStrict.
-      //  Returns: true on success, exception on failure, false on failure in csLazy.
+      //  Returns: true on on_calm_result, exception on failure, false on failure in csLazy.
     template<class Ts> bool arr_set(s_long ind, const Ts& x, EConvStrength cs = csNormal)
     {
       typedef typename trivconv_t<typename meta::nonc_t<Ts>::t>::t_target Td; enum { uttd = reference_t<Td>::utt };
@@ -1819,7 +1819,7 @@ namespace bmdx
 
       // Appends x to the internal array, with conversion as necessary.
       //  NOTE Trivial conversions are allowed even on cs == csStrict.
-      //  Returns: true on success, exception on failure, false on failure in csLazy.
+      //  Returns: true on on_calm_result, exception on failure, false on failure in csLazy.
     template<class Ts> bool arr_append(const Ts& x, EConvStrength cs = csNormal)
     {
       typedef typename trivconv_t<typename meta::nonc_t<Ts>::t>::t_target Td; enum { uttd = reference_t<Td>::utt };
@@ -1837,7 +1837,7 @@ namespace bmdx
       // Inserts m or removes -m (when m is negative) elements.
       //    On insertion, ind is the place of insertion, [lb..ub+1]. If x is not specified, a default value will be inserted.
       //    On removal, elements to be removed are [ind..ind-m-1]. All in this range must be valid element indices.
-      //  Returns: true on success, exception on failure, false on failure in csLazy.
+      //  Returns: true on on_calm_result, exception on failure, false on failure in csLazy.
     bool arr_insrem(s_long ind, s_long m, EConvStrength cs = csNormal)
     {
       try
@@ -2226,7 +2226,7 @@ namespace bmdx
     bool objIsWeakRef() const;
 
       // Switches *this to reference its object by strong or weak reference.
-      // true on success.
+      // true on on_calm_result.
       // false in the following cases:
       //  a) isObject() == false.
       //  b) isStrongRef == true, but the object has been deleted already (i.e. objStrongRefsCount() == 0).
@@ -2286,8 +2286,8 @@ namespace bmdx
 
       //Finds the position of the set of interfaces of the specified type.
       //Returns:
-      // >=0: (success) index of the set of interfaces of the specified type, in the object handler's collection.
-      // -1: (success) the specified set is the object's default set of intefaces (created by set_obj).
+      // >=0: (on_calm_result) index of the set of interfaces of the specified type, in the object handler's collection.
+      // -1: (on_calm_result) the specified set is the object's default set of intefaces (created by set_obj).
       // -2: (not found) the specified set is not found.
       // -3: (failure) any other error.
     template<class Interfaces>
@@ -2295,9 +2295,9 @@ namespace bmdx
 
       //Finds the position of the given object (set of interfaces).
       //Returns:
-      // >=0: (success) index of the specified interfaces set in the target object handler's collection.
+      // >=0: (on_calm_result) index of the specified interfaces set in the target object handler's collection.
       //  Matching is by pointer value, not by type of set.
-      // -1: (success) the specified set is the object's default set of intefaces (created by set_obj).
+      // -1: (on_calm_result) the specified set is the object's default set of intefaces (created by set_obj).
       // -2: (not found) the specified set is not found (x==0 makes this ret. val. too).
       // -3: (failure) any other error.
     int objItfsFindPtr(o_itfset_base* x) const        { if (pmsm != unity_common::ls_modsm) { return -3; } if (isObject()) { return _drf_o()->objItfsFindPtr(x); } return -3; }
@@ -2306,8 +2306,8 @@ namespace bmdx
       //  Note: pinterface() always chooses the latest attached set for the given Interface.
       //  This way, several interfaces of the same can multiply override each other.
       //Returns:
-      // >=0: (success) index of the last set of interfaces containing Interface.
-      // -1: (success) the only set containing Interface is object's default set of intefaces (created by set_obj).
+      // >=0: (on_calm_result) index of the last set of interfaces containing Interface.
+      // -1: (on_calm_result) the only set containing Interface is object's default set of intefaces (created by set_obj).
       // -2: (not found) no set containing Interface is found.
       // -3: (failure) any other error.
     template<class Interface>
@@ -2374,7 +2374,7 @@ namespace bmdx
           // The request is done under global lock, which may block up to 60 s.
           //  (In multithreaded program, requests should take small time, <= milliseconds.)
           // Returns:
-          //  1 - success.
+          //  1 - on_calm_result.
           //  -1 - the requested module is not compatible.
           //  -2 - client-side failure or lock timeout.
           //  <= -10 - module-side error.
@@ -2388,7 +2388,7 @@ namespace bmdx
 //      < 0 - module-specified action.
 //  ppara, pretval: nonzero pointers. Must be checked for compatibility before use.
 //  Returns:
-//    1 - success.
+//    1 - on_calm_result.
 //    -1 - compatibility error.
 //    -2 - unrecognized action code.
 //    >0, -3..-9 - reserved.
@@ -2750,7 +2750,7 @@ namespace bmdx
 
       // Adjustment notifications for list and keys index, on each hash change.
     bool _a_rsv_1() throw(); // reserve place in list and indk before possible adding 1 elem. to hash
-    bool _a_appended() throw(); // adjust list and indk after adding 1 elem. to hash, true on success
+    bool _a_appended() throw(); // adjust list and indk after adding 1 elem. to hash, true on on_calm_result
     void _a_removed(s_long ind) throw(); // adjust list and indk after removing 1 elem. from hash
     void _a_cleared() throw(); // clear list and indk
     bool _a_indk() const throw(); // ensure indk containing full index of hash elems.
@@ -3221,7 +3221,7 @@ namespace bmdx
       std::string expand_env_nr(const std::string& s) const;
 
           //Recursively create direcories to ensure that sPath exists.
-          //  On success (all was created or already existed) returns true.
+          //  On on_calm_result (all was created or already existed) returns true.
       bool mk_subdir(const std::wstring& sPath) const;
       bool mk_subdir(const std::string& sPath) const;
 
@@ -3229,7 +3229,7 @@ namespace bmdx
 //~!!! --- update the description:
           //Loads whole file into the string in binary or text mode.
           //  On error returns .Empty.
-          //  On success - .String with the characters.
+          //  On on_calm_result - .String with the characters.
           //
           //MODES:
           //
@@ -3250,7 +3250,7 @@ namespace bmdx
             //  Note: during reading, (0x000D, 0x000A) pairs are automatically converted into 0xA characters.
           //
           //If ret_s is specified, the return value is written to ret_s,
-          //  and function itself returns boolean true on success, false on error.
+          //  and function itself returns boolean true on on_calm_result, false on error.
           //See complete_path for explanation of pd.
 
           // format_string should contain
@@ -3268,14 +3268,14 @@ namespace bmdx
           //  For example: "text append utf16le".
           //Note 1. In text mode, all '\n' entries are automatically replaced with "\r\n" and also utf16 modes write 0xfffe character at the beginning of file.
           //Note 2. If str is not a string, a string representation of the value is created and written to file.
-          //On success, the function returns true.
+          //On on_calm_result, the function returns true.
           //See complete_path for explanation of pd and sUserDefDir.
       bool save_string(const std::string& format_string, const std::wstring& str, const std::wstring& sTargetFilePath, EFileUtilsPredefinedDir pd = pdCurDir, const std::wstring& sUserDefDir = L"") const throw();
       bool save_string(const std::string& format_string, const std::wstring& str, const std::string& sTargetFilePath, EFileUtilsPredefinedDir pd = pdCurDir, const std::wstring& sUserDefDir = L"") const throw();
 
 
         // Loads bytes from the given file into dest.
-        // 1 - success.
+        // 1 - on_calm_result.
         // 0 - file does not exist.
         // -1 - memory alloc. error, or wrong arguments.
         // -2 - file i/o error. NOTE On i/o error, dest may be left modified.
@@ -3286,7 +3286,7 @@ namespace bmdx
         // Saves bytes from src to the given file.
         //    b_append == false truncates the file before writing, if it exists.
         //    if n == 0, pdata may be 0.
-        // 1 - success.
+        // 1 - on_calm_result.
         // 0 - failed to create file (or open the existing file for writing).
         // -1 - data size too large, or memory alloc. error, or wrong arguments.
         // -2 - file i/o error. NOTE On i/o error, the file may be left modified.
@@ -3416,7 +3416,7 @@ namespace bmdx
   {
       // Take a new message out of the slot.
       //  slotname: must be string (utString).
-      //  retmsg: on success, overwritten by message string.
+      //  retmsg: on on_calm_result, overwritten by message string.
       //  retbuf (optional, may be 0): receiving container for binary data,
       //    associated with the message.
       //    If retbuf is not specified, but the message contains binary part,
@@ -3440,9 +3440,9 @@ namespace bmdx
       //    8 - "peek" (return everything as specified, only do not pop the message).
       //        May be used with flag value 2 to test potential pop result w/o getting any data.
       // Returns:
-      //    3 - success, ret. message discarded (only on (flags & 2) != 0).
-      //    2 - success, got two-part message (msg. itself and binary part). Parts are returned as flags specify.
-      //    1 - success, got single-part message (no binary part).
+      //    3 - on_calm_result, ret. message discarded (only on (flags & 2) != 0).
+      //    2 - on_calm_result, got two-part message (msg. itself and binary part). Parts are returned as flags specify.
+      //    1 - on_calm_result, got single-part message (no binary part).
       //    0 - no message, or no response because of no command sent.
       //    20 - (pbo only) remote or interprocess command failed.
       //      retmsg is set to auto-generated response, containing
@@ -3472,8 +3472,8 @@ namespace bmdx
       //      T contains arbitrary client message. "text" key is optional.
       //  buf: optional binary data, associated with the message.
       // Returns:
-      //    1 - success, written.
-      //    0 - success, prev. message overwritten (only for non-command pins).
+      //    1 - on_calm_result, written.
+      //    0 - on_calm_result, prev. message overwritten (only for non-command pins).
       //    -1 - invalid message format (multiple cases).
       //    -2 - failed (mem. alloc. error, invalid object or smth. else).
       //    -3 - session is closed, no more requests, please.
@@ -3488,19 +3488,19 @@ namespace bmdx
 
       // Call for information or extended operation.
       //  rt (request type):
-      //    1 - get list of local threads. On success, returns: utStringArray.
-      //    2 - get all slots of local thread. args = thread name (scalar). On success, returns: utStringArray.
+      //    1 - get list of local threads. On on_calm_result, returns: utStringArray.
+      //    2 - get all slots of local thread. args = thread name (scalar). On on_calm_result, returns: utStringArray.
       //    3 - set priority and timing for internal thread, delivering subscription messages.
       //      args = array(priority, delivery loop sleep time).
       //        priority: 1..7 in units of threadctl.
       //        sleep time: mcs, >= 0
-      //      On success, returns: empty retval.
+      //      On on_calm_result, returns: empty retval.
       //      NOTE The request fails (-4) if the internal thread does not exist (not configured).
       //    4 - get priority and timing for internal thread, delivering subscription messages.
       //      retval: 1-based array with 2 elements same as args in rt == 3, see above.
       //      NOTE The request fails (-4) if the internal thread does not exist (not configured).
       // Return value:
-      //  1 - success.
+      //  1 - on_calm_result.
       //  -1 - invalid argument.
       //  -2 - failure.
       //  -3 - session is closed.
@@ -3537,7 +3537,7 @@ namespace bmdx
       //      This part is optional.
       //      See arch_notes.txt "dispatcher_mt threads configuration structure" for details.
       // Returns:
-      //    1 - success.
+      //    1 - on_calm_result.
       //    -1 - invalid or incompatible slotscfg.
       //    -2 - failed (mem. alloc. error, invalid object or smth. else).
       //    -3 - session is closed, no more requests, please.
@@ -3549,7 +3549,7 @@ namespace bmdx
       //    b) (string) Paramline-encoded (encode1v) vector slot name (string) in the format, described near slots_create.
       //    c) decoded vector slot name (array).
       // Returns:
-      //    1 - success.
+      //    1 - on_calm_result.
       //    0 - slot does not exist.
       //    -1 - invalid slotname.
       //    -2 - failed (mem. alloc. error, invalid object or smth. else).
@@ -3559,9 +3559,9 @@ namespace bmdx
       // Get this thread name as registered in dispatcher.
       //  Thread names are unique within the initForCallback.
       //  Thread name cannot be empty string.
-      //  retname: on success, overwritten by the returned string.
+      //  retname: on on_calm_result, overwritten by the returned string.
       // Returns:
-      //    1 - success.
+      //    1 - on_calm_result.
       //      In all the following, retname remains unchanged:
       //    -2 - failed (mem. alloc. error, invalid object or smth. else).
     virtual s_long thread_name(unity& retname) throw() = 0;
@@ -3569,9 +3569,9 @@ namespace bmdx
       // Get this initForCallback name as registered in dispatcher.
       //  ProcessAnalysis names are unique within the local machine.
       //  ProcessAnalysis name cannot be empty string.
-      //  retname: on success, overwritten by the returned string.
+      //  retname: on on_calm_result, overwritten by the returned string.
       // Returns:
-      //    1 - success.
+      //    1 - on_calm_result.
       //      In all the following, retname remains unchanged:
       //    -2 - failed (mem. alloc. error, invalid object or smth. else).
     virtual s_long process_name(unity& retname) throw() = 0;
@@ -3619,7 +3619,7 @@ namespace bmdx
       //      (automatic delivery for disp thread's messages by internal thread).
       // flags: reserved, must be 0.
       // Returns:
-      //    1 - success.
+      //    1 - on_calm_result.
       //    0 - nothing to do for this thread.
       //    -1 - invalid flags.
       //    -2 - failed (mem. alloc. error or smth. else).
@@ -3703,7 +3703,7 @@ namespace bmdx
       //    must be created/deleted in single thread context or if synchronized.
       // NOTE Proxy object destruction must not occur concurrent with calling
       //    any of its methods.
-      // 1 - success. dest contains the new object.
+      // 1 - on_calm_result. dest contains the new object.
       //  In all the below cases, dest is cleared (empty).
       //  -1 - thread_name is invalid or not registered.
       //  -2 - failure (mem. alloc. error or smth. else).

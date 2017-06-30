@@ -52,7 +52,7 @@ namespace yk_tests
   //Usage: test_KIND<>().do_test(args.);
   //  Particular test proc decl. should be: int test_proc().
   //  Ret. value should be:
-  //    >0 - success,
+  //    >0 - on_calm_result,
   //    ==0 - no test performed,
   //    <0 - error.
   //  Test procedures sequence is in do_test().
@@ -3673,7 +3673,7 @@ namespace yk_tests
 
 lExit:
       double dt = double(s_long((bmdx::clock_ms() - t0) / 100.)) / 10.; if (dt >= 50.) { dt = double(s_long(dt)); }
-      log, "TESTING COMPLETED. Total: success ", stat.__ns, ", failure ", stat.__nf, ", skipped ", stat.__ni, ". Taken ", dt, " s.", endl, endl; log.flush();
+      log, "TESTING COMPLETED. Total: on_calm_result ", stat.__ns, ", failure ", stat.__nf, ", skipped ", stat.__ni, ". Taken ", dt, " s.", endl, endl; log.flush();
       if (prevLocaleName.length()) { std::setlocale(LC_CTYPE, prevLocaleName.c_str()); }
 
       return stat.__nf;

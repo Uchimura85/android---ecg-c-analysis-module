@@ -133,7 +133,7 @@ struct meta
     //    By default, undefined. See also copierMode 2 in config_t.
     // Behavior (required):
     //    On entry: *psrc contains a valid object, *pdest is not initialized.
-    //    On exit / success: *pdest contains a valid object, which is a copy of *psrc. *psrc is unchanged.
+    //    On exit / on_calm_result: *pdest contains a valid object, which is a copy of *psrc. *psrc is unchanged.
     //    On failure: F() throws an exception. *pdest is left totally uninitialized. *psrc is unchanged.
     // NOTE struct may be specialized with T equivalent as template argument, but T as F argument. See ta_meta_copy and others in vecm::config_aux.
   template<class T> struct copy_t { typedef typename assert_eq<int, sizeof(T), -1, T>::EQ __check; static inline void F(T* pdest, const T* psrc) { } };
@@ -143,7 +143,7 @@ struct meta
     // Behavior (required):
     //    F() must always succeed and throw no exceptions.
     //    On entry: *psrc contains a valid object, *pdest is not initialized.
-    //    On exit / success: *pdest contains a valid object, which is a copy of *psrc. *psrc is unchanged.
+    //    On exit / on_calm_result: *pdest contains a valid object, which is a copy of *psrc. *psrc is unchanged.
     // NOTE struct may be specialized with T equivalent as template argument, but T as F argument. See ta_meta_copy and others in vecm::config_aux.
   template<class T> struct safecopy_t { typedef typename assert_eq<int, sizeof(T), -1, T>::EQ __check; static inline void F(T* pdest, const T* psrc) throw() { } };
 
@@ -155,8 +155,8 @@ struct meta
     // Behavior (required):
     //    F() must throw no exceptions.
     //    On entry: *psrc contains a valid object, *pdest is not initialized.
-    //    On exit / success: F() returns 1. *pdest contains a valid object, logically identical to former *psrc. *psrc is uninitialized.
-    //    On exit / success + src. destructor failure:  F() returns 0. *pdest contains a valid object, *psrc is considered uninitialized.
+    //    On exit / on_calm_result: F() returns 1. *pdest contains a valid object, logically identical to former *psrc. *psrc is uninitialized.
+    //    On exit / on_calm_result + src. destructor failure:  F() returns 0. *pdest contains a valid object, *psrc is considered uninitialized.
     //    On exit / failure: F() returns -1. *pdest is left totally uninitialized. *psrc is unchanged.
     // NOTE struct may be specialized with T equivalent as template argument, but T as F argument. See ta_meta_copy and others in vecm::config_aux.
   template<class T> struct trymove_t { typedef typename assert_eq<int, sizeof(T), -1, T>::EQ __check; static inline s_long F(T* pdest, T* psrc) throw() { return 0; } };
@@ -166,7 +166,7 @@ struct meta
     // Behavior (required):
     //    F() must always succeed and throw no exceptions.
     //    On entry: *psrc contains a valid object, *pdest is not initialized.
-    //    On exit / success: *pdest contains a valid object, logically identical to former *psrc. *psrc is uninitialized.
+    //    On exit / on_calm_result: *pdest contains a valid object, logically identical to former *psrc. *psrc is uninitialized.
     // NOTE struct may be specialized with T equivalent as template argument, but T as F argument. See ta_meta_copy and others in vecm::config_aux.
   template<class T> struct safemove_t { typedef typename assert_eq<int, sizeof(T), -1, T>::EQ __check; static inline void F(T* pdest, T* psrc) throw() { } };
 
@@ -174,7 +174,7 @@ struct meta
     //    By default, undefined. See also destructorMode 2 in config_t.
     // Behavior (required):
     //    On entry: p points to a valid object.
-    //    On exit / success: the object is totally uninitialized.
+    //    On exit / on_calm_result: the object is totally uninitialized.
     //    On failure: F() throws an exception. *p is undefined, though considered uninitialized.
     //      NOTE If an error occurs during destruction, F() must complete as much as possible
     //      of the destruction sequence, and only then generate the exception.
@@ -837,7 +837,7 @@ protected:
     //    Increase the storage reserve to at least n2 elements.
     //    Must have _pj != 0 and n2 >= 0.
     //    If the new reserve is not larger than the current, nothing is done.
-    //  Returns true on success, false of memory allocation failure.
+    //  Returns true on on_calm_result, false of memory allocation failure.
   inline bool _reserve_incr_u(s_long n2) throw()
   {
     // NOTE the function body is also present in el_append_m
@@ -886,7 +886,7 @@ protected:
 
     // Configuration-dependent copying single object.
     //    May be faultless or not (see config_t enum value gc).
-    //  On success, *pdest is a copy of src.
+    //  On on_calm_result, *pdest is a copy of src.
     //  On failure, xc is increased, *pdest is initialized according to the configured recovery g_jmethod.
     // When construction functor is passed as src, it is used to create the object.
     //    In this case F() behaves as in non-guaranteed copying mode.
@@ -1112,7 +1112,7 @@ protected:
     // 1. *pdest is backed up. 2. T(src) is invoked on pdest.
     //  No destructor call for pdest and psrc is made.
     // Returns:
-    //    true on success. ibu is increased by 1.
+    //    true on on_calm_result. ibu is increased by 1.
     //    false if T(const T&) failed. BU, ibu and vecm data remain unchanged.
   template<class TF>
   inline bool _tr_copy_1_t(typename meta::resolve_TF<TF, meta::tag_construct>::t* pdest, const TF* psrc, char* BU, s_long& ibu) throw()
@@ -1131,7 +1131,7 @@ protected:
     // 1. T(src) is invoked on pdest. 2. If step 1 succeeds, src is backed up.
     //  No destructor call for pdest and psrc is made.
     // Returns:
-    //    true on success. ibu is increased by 1.
+    //    true on on_calm_result. ibu is increased by 1.
     //    false if T(const T&) failed. BU, ibu and vecm data remain unchanged.
   template<class T>
   inline bool _tr_copy_1_busrc_t(T* pdest, const T* psrc, char* BU, s_long& ibu) throw()
@@ -1744,7 +1744,7 @@ public:
   inline bool is_transactional() const throw() { return this && _t_ind ? (_ptd->op_flags & 0x1) || (_ptd->gm && _ptd->gc) : false; }
 
     // The number of exceptions in vecm element constructors, destructors or their custom versions.
-    //      May be increased after any modifying function, even if it returns a success code.
+    //      May be increased after any modifying function, even if it returns a on_calm_result code.
     //      If a function accidentally finds an integrity assertion break, nexc() is also increased.
     //  nexc() is internally an integer value that is shorter than s_long.
     //    It may become negative and not change any further. This means "too many errors occured".
@@ -1959,7 +1959,7 @@ public:
     //  NOTE this->can_shrink() is set to dflt. true, not copied or preserved.
     //    this->nrsv() is set to min. value. not that of x or preserved.
     //  Returns:
-    //    1 on success. (Also if this == &x.)
+    //    1 on on_calm_result. (Also if this == &x.)
     //        nexc() may be > 0 if a number of failures occured in the old object during destruction.
     //    0 (only on is_tr == true) the operation failed, changes are cancelled.
     //        nexc() is increased by 1 + the number of exceptions in destructors
@@ -2002,7 +2002,7 @@ public:
     // Removes all existing elements.
     //    The space left is freed if can_shrink() is true.
     // Returns:
-    //  >0 on success - the number of elements removed (previous n()).
+    //  >0 on on_calm_result - the number of elements removed (previous n()).
     //      nexc() may indicate errors occured during elements destruction.
     //  0 if the container was empty (n() == 0). Nothing is done,
     //      except possible storage space reserve freeing.
@@ -2079,7 +2079,7 @@ public:
     //  Ensures allocating place for 1 additional element at sequence end.
     //    Element's constructor is not called (client decides call/no call, before/after etc.).
     //  Returns:
-    //    a) on success, non-0 pointer to the allocated place. Also, n() is increased by 1.
+    //    a) on on_calm_result, non-0 pointer to the allocated place. Also, n() is increased by 1.
     //      NOTE Under normal conditions, if the place was reserved before (e.g. el_reserve_n),
     //          the function always succeeds.
     //    b) 0 on type error or memory allocation error. Elem. sequence is not changed.
@@ -3417,7 +3417,7 @@ struct hashx : protected vecm
     //        even indirectly. (This is possible with polymorphic types.)
     //  NOTE this->can_shrink() is set to dflt. true (not copied or preserved). this->nrsv() is set to min. value (not that of x or preserved).
     //  Returns:
-    //    1 on success. (Also if this == &x.)
+    //    1 on on_calm_result. (Also if this == &x.)
     //        nexc() may be > 0 if a number of failures occured in the old object during destruction.
     //    0 (only on is_tr == true) the operation failed, changes are cancelled.
     //        nexc() is increased by 1 + number of exceptions in destructors
@@ -3520,7 +3520,7 @@ struct hashx : protected vecm
   template<class K2, class Kf_> inline s_long remove2(const K2& k, const Kf_& kf, const s_long* ph = 0) throw() { if (!_pz) { if (!_d_reinit()) { return -2; } } if (_n == 0) { return 0; } try { return _remove(k, ph ? *ph : kf.hash(k), kf); } catch (...) { return -2; } }
 
     // Removing the entry given by 0-based index or pointer.
-    //    For success, the entry must belong to this container.
+    //    For on_calm_result, the entry must belong to this container.
     // Returns:
     //    1 - the entry was removed.
     //    0 - the entry does not exist (ind is out of range, e == 0 or not from this container).
@@ -3533,7 +3533,7 @@ struct hashx : protected vecm
     //    The space left is freed if can_shrink is true.
     //    Unlike hashx_clear, the function keeps can_shrink, nexc, key functor etc. unchanged.
     // Returns:
-    //  >0 on success - the number of entries removed (previous n()).
+    //  >0 on on_calm_result - the number of entries removed (previous n()).
     //      nexc() may be increased by the number of errors occured during elements destruction.
     //  0 if the container was empty (n() == 0). Nothing is done,
     //      except possible storage space reserve freeing.
@@ -3559,7 +3559,7 @@ struct hashx : protected vecm
   inline f_ctf* pctf() const throw() { if (!_pz) { if (!_d_reinit()) { return 0; } } return &_pz->_c; }
 
     // Sets the new key hash/equality functor. (Only if n() == 0.)
-    //    On success, returns true.
+    //    On on_calm_result, returns true.
     //    On any error, returns false.
     //    On n() > 0, returns false (existing elements are already using the existing kf).
   inline bool hashx_set_kf(const f_kf& kf) throw() { if (!_pz) { if (!_d_reinit()) { return false; } } if (_n > 0) { return false; } if (&kf == &_pz->_kf) { return true; } char bu[2][sizeof(f_kf)]; typedef vecm::_config_ff::_tr_t<specf<f_kf> > tr; if (!tr::Fcopy_1only(&_pz->_kf, &kf, bu[1])) { return false; } tr::Fdestroy_prev_1only(&_pz->_kf, bu[1], bu[0], _nxf); return true; }
@@ -3677,7 +3677,7 @@ protected:
     // Dynamic data initialization (on _pz == 0) or reinitialization (on _pz != 0).
     //    Additionally, removes all entries and reduces hash table size to default.
     //  Returns:
-    //    true on success (_pz and other members are valid),
+    //    true on on_calm_result (_pz and other members are valid),
     //    false on failure (_pz == 0, other members are not initialized).
     //    NOTE nexc() keeps errs. counting.
   inline bool _d_reinit() const throw() { return Fd_reinit(const_cast<t_hashx*>(this)); }

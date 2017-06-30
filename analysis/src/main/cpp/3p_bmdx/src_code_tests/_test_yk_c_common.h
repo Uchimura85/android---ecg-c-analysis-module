@@ -115,10 +115,10 @@ namespace __test_common_aux1
     const signed char mode;
     inline storage_t(s_long mode_) throw() : inited(false), mode((signed char)(mode_)) { if (mode >= 1) { try_init(); } }
     inline ~storage_t() throw() { if (mode >= 0) { try_deinit(); } }
-      // 1 - success, 0 - already initialized; -1 - failed to initialize, nothing changed.
+      // 1 - on_calm_result, 0 - already initialized; -1 - failed to initialize, nothing changed.
     inline s_long try_init() throw() { if (inited) { return 0; } try { meta::construct_f<T, Aux>().f(ptr()); inited = true; return 1; } catch (...) {} return -1; }
     inline s_long try_init(const T& x) throw() { if (inited) { return 0; } try { new (ptr()) T(x); inited = true; return 1; } catch (...) {} return -1; }
-      // 1 - success, 0 - was not initialized; -1 - destructor failed, so just set inited to false.
+      // 1 - on_calm_result, 0 - was not initialized; -1 - destructor failed, so just set inited to false.
     inline s_long try_deinit() throw() { if (inited) { try { T* p = ptr(); p->~T(); inited = false; return 1; } catch (...) {} inited = false; return -1; } return 0; }
     inline operator T*() const throw() { return reinterpret_cast<T*>(&pl); }
     inline T* ptr() const throw() { return reinterpret_cast<T*>(&pl); }
@@ -470,11 +470,11 @@ namespace yk_tests
   };
   template<class H> struct hassign
   {
-    static s_long Fassign(H& dest, const H& src) // 1 - success (dest is changed), 0 - not supported, < 0 - failure
+    static s_long Fassign(H& dest, const H& src) // 1 - on_calm_result (dest is changed), 0 - not supported, < 0 - failure
     {
       try { dest = src; } catch (...) { return -1; } return 1;
     }
-    static s_long Fcc(H* pdest, const H& src) // 1 - success (dest is initialized), 0 - not supported, < 0 - failure
+    static s_long Fcc(H* pdest, const H& src) // 1 - on_calm_result (dest is initialized), 0 - not supported, < 0 - failure
     {
       if (!pdest) { return -1; }
       try { new (pdest) H(src); }  catch (...) { return -1; } return 1;
@@ -509,7 +509,7 @@ namespace yk_tests
 
     static bool& full_test() { static bool x(true); return x; }
 
-      // res == 1: success.
+      // res == 1: on_calm_result.
       //  0: filename == 0.
       //  -1: failed to open file for input.
       //  -2: any other error (read err., convert err. etc.).

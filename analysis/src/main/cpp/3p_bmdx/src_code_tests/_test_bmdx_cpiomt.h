@@ -133,7 +133,7 @@ using namespace bmdx;
   //  "any" may be anything, it's not used.
   //  Particular test proc decl. should be: int test_proc().
   //  Ret. value should be:
-  //    >0 - success,
+  //    >0 - on_calm_result,
   //    ==0 - no test performed,
   //    <0 - error.
   //  Test procedures sequence is in do_test().
@@ -660,7 +660,7 @@ template<class __anything = int> struct test_bmdx_cpiomt : yk_tests::test_base_t
 
 
 lExit:
-    log << "TESTING COMPLETED. Total: success " << stat.__ns << ", failure " << stat.__nf << ", skipped " << stat.__ni << "." << endl << endl; log.flush();
+    log << "TESTING COMPLETED. Total: on_calm_result " << stat.__ns << ", failure " << stat.__nf << ", skipped " << stat.__ni << "." << endl << endl; log.flush();
     if (prevLocaleName.length()) { std::setlocale(LC_CTYPE, prevLocaleName.c_str()); }
 
     return stat.__nf;

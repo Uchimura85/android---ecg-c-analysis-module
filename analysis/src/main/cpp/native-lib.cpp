@@ -192,9 +192,11 @@ Java_com_tool_sports_com_analysis_ProcessAnalysis_wfdbExport(JNIEnv *env,
     } catch (...) {}
 }
 
+int window_size = 250 * 30; // 5 minutes
+int interval = 250 * 30;// 1 minutes
 
 MyReturnValue VLFLFHF(MyArray data) {
-    int window_size = 250 * 30; // 5 minutes
+
     int samplefreq = 250; // 250Hz
     MyArray n = seq(0, (window_size - 1));
     MyArray freq = arrayMul(n, samplefreq / (FLOAT) window_size);
@@ -218,22 +220,22 @@ MyReturnValue VLFLFHF(MyArray data) {
     LOGD("VLFLFHF step3 %d %d %d", length(vlf), length(lf), length(hf));
 
     FLOAT vlf_dif = 0;
-    for (int x = 0; x < (nrow(vlf) - 1); x++) {
-        vlf_dif = sum(abs(vlf.spec.at((unsigned int) x + 1) - vlf.spec.at((unsigned int) x)),
+    for (unsigned int x = 0; x < (nrow(vlf) - 1); x++) {
+        vlf_dif = sum(abs(vlf.spec.at(x + 1) - vlf.spec.at(x)),
                       vlf_dif);
     }
     LOGD("vlf_dif                    %f", vlf_dif);
     vlf_dif = vlf_dif / (FLOAT) length(condition1(PS));
 
     FLOAT lf_dif = 0;
-    for (int x = 0; x < (nrow(lf) - 1); x++) {
-        lf_dif = sum(abs(lf.spec.at((unsigned int) x + 1) - lf.spec.at((unsigned int) x)), lf_dif);
+    for (unsigned int x = 0; x < (nrow(lf) - 1); x++) {
+        lf_dif = sum(abs(lf.spec.at(x + 1) - lf.spec.at(x)), lf_dif);
     }
     lf_dif = lf_dif / (FLOAT) length(condition2(PS));
 
     FLOAT hf_dif = 0;
-    for (int x = 0; x < (nrow(hf) - 1); x++) {
-        hf_dif = sum(abs(hf.spec.at((unsigned int) x + 1) - hf.spec.at((unsigned int) x)), hf_dif);
+    for (unsigned int x = 0; x < (nrow(hf) - 1); x++) {
+        hf_dif = sum(abs(hf.spec.at(x + 1) - hf.spec.at(x)), hf_dif);
     }
     hf_dif = hf_dif / (FLOAT) length(condition3(PS));
 
@@ -343,10 +345,11 @@ int const FILETYPE_ECG = 0;
 int const FILETYPE_RRI = 1;
 int const FILETYPE_CALM = 2;
 
-template <class arrayType>
+template<class arrayType>
 void saveCSV(arrayType _arrEcg, string _str_dp, string _str_filename, int type = 0) {
     string filename = _str_filename;
-    LOGD("savecsv: dir: %s, filename: %s, nameLen: %d",_str_dp.c_str(), filename.c_str(), filename.length());
+    LOGD("savecsv: dir: %s, filename: %s, nameLen: %d", _str_dp.c_str(), filename.c_str(),
+         filename.length());
     if (filename.length() == 0) {
         return;
     }
@@ -373,7 +376,8 @@ void saveCSV(arrayType _arrEcg, string _str_dp, string _str_filename, int type =
         strForFile += "\r\n";
     }
     int fres = file_io::save_bytes(filename.c_str(), strForFile, true);
-    LOGD("savecsvresult: file: %s, content length: %d, success: %d", filename.c_str(), strForFile.length(), fres);
+    LOGD("savecsvresult: file: %s, content length: %d, on_calm_result: %d", filename.c_str(),
+         strForFile.length(), fres);
     // END file write
 }
 
@@ -486,10 +490,6 @@ void calmnessDataSrc(MyArray RRI) {
 MyArray preIRRI;
 
 void calmnessAlgo(MyArray IRRI) {
-    //3. Calculate HRV Power Spectrum using fourier analysis
-    int window = 250 * 30;// 5 minutes
-    int interval = 250 * 10;// 1 minutes
-
     // Calculate
     MyArray ar_vlf_sum;
     MyArray ar_lf_sum;
@@ -500,7 +500,7 @@ void calmnessAlgo(MyArray IRRI) {
     MyArray ar_hf_dif;
 
     IRRI = concat(preIRRI, IRRI);
-    int count = length(IRRI) - window;
+    int count = length(IRRI) - window_size;
     int nTimes = count / interval;
     int remain = count % interval;
 
@@ -518,11 +518,10 @@ void calmnessAlgo(MyArray IRRI) {
 
 //    count = count - remain;
     for (int i = 0; i < nTimes * interval; i += interval) {
-//        LOGE1(" %d   count of for (ceil) %d,    IRRI size = %d remain = %d rLength = %d, nTimes= %d, ",
-//              i, count, length(IRRI), remain,length(preIRRI),nTimes);
-        MyArray arrSeq = seq(i, i + window - 1);
+        LOGE1(" %d   count of for (ceil) %d,    IRRI size = %d remain = %d rLength = %d, nTimes= %d, ",
+              i, count, length(IRRI), remain, length(preIRRI), nTimes);
+        MyArray arrSeq = seq(i, i + window_size - 1);
         MyArray arrByIndex = getByIndexArr(IRRI, arrSeq);
-
         MyReturnValue _VLFLFHF = VLFLFHF(arrByIndex);
         ar_vlf_sum = concat(ar_vlf_sum, _VLFLFHF.vlf_sum);
         ar_lf_sum = concat(ar_lf_sum, _VLFLFHF.lf_sum);
@@ -545,27 +544,46 @@ void calmnessAlgo(MyArray IRRI) {
     FLOAT a = 50;
     FLOAT b = 50;
     int len = length(df_VLFLFHF);
-    MyArray calmness;
+    MyArray calmness, calmness2;
+
     for (unsigned int i = 0; i < len; i++) {
-        FLOAT PR = max(df_VLFLFHF.ar_vlf_sum.at(i), df_VLFLFHF.ar_lf_sum.at(i),
-                       df_VLFLFHF.ar_hf_sum.at(i))
+        FLOAT PR = (
+                           max(df_VLFLFHF.ar_vlf_sum.at(i), df_VLFLFHF.ar_lf_sum.at(i),
+                               df_VLFLFHF.ar_hf_sum.at(i))
+                           -
+                           min(df_VLFLFHF.ar_vlf_sum.at(i), df_VLFLFHF.ar_lf_sum.at(i),
+                               df_VLFLFHF.ar_hf_sum.at(i))
+                   )
                    / sum(df_VLFLFHF.ar_vlf_sum.at(i), df_VLFLFHF.ar_lf_sum.at(i),
                          df_VLFLFHF.ar_hf_sum.at(i));
 
-        FLOAT DR = max(df_VLFLFHF.ar_vlf_dif.at(i), df_VLFLFHF.ar_lf_dif.at(i),
-                       df_VLFLFHF.ar_hf_dif.at(i))
+        FLOAT DR = (
+                           max(df_VLFLFHF.ar_vlf_dif.at(i), df_VLFLFHF.ar_lf_dif.at(i),
+                               df_VLFLFHF.ar_hf_dif.at(i))
+                           -
+                           min(df_VLFLFHF.ar_vlf_dif.at(i), df_VLFLFHF.ar_lf_dif.at(i),
+                               df_VLFLFHF.ar_hf_dif.at(i))
+                   )
                    / sum(df_VLFLFHF.ar_vlf_dif.at(i), df_VLFLFHF.ar_lf_dif.at(i),
                          df_VLFLFHF.ar_hf_dif.at(i));
+        FLOAT _calm = a * PR + b * DR;
         if (1) {
             t_lock_MyArray __lock;
             (void) __lock;
-            calmness.push_back(a * PR + b * DR);
-        }
 
-        LOGE1("calmness %d   PR= %f DR= %f calm=%f", i, PR, DR, a * PR + b * DR);
+            calmness.push_back(_calm);
+            LOGE1("calmness_1  %d   PR= %f DR= %f calm  = %f", i, PR, DR, _calm);
+            FLOAT _calm2 = (_calm - 80) / (94 - 80) * 100;
+            if (_calm2 > 100)_calm2 = 100;
+            if (_calm2 < 0)_calm2 = 0;
+            calmness2.push_back(_calm2);
+            LOGE1("calmness_2  %d   PR= %f DR= %f calm2 = %f", i, PR, DR, _calm2);
+
+        }
     }
-    show(calmness);
-    calmnessOut(calmness);
+    show(calmness2);
+
+    calmnessOut(calmness2);
 }
 
 void calmnessOut(MyArray _calmness) {

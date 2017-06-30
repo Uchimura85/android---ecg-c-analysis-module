@@ -247,7 +247,7 @@ int wfdb_export(int argc, char **argv) {
                     break;
                 }
                 res = 0;
-                break; // success
+                break; // on_calm_result
             }
 
         if (res) {

@@ -307,7 +307,7 @@ namespace ecgsqa
       //  b_final == true at the last (or single) run, to exhaust internal queues and complete pending calculations.
       //  After the last run, state() becomes 2, and reset() is necessary to Test new session.
       // Returns:
-      //    1 - success. In queued processing: if the run was not final,
+      //    1 - on_calm_result. In queued processing: if the run was not final,
       //        all samples up to and not including min_gisrc() may be removed from ECG beginning,
       //        and next portion of samples can be added.
       //    0 - OK, but no job done - not enough data. In queued processing: if the run was not final, add more ECG input data,
@@ -599,7 +599,7 @@ namespace ecgsqa
       //  b_final == true at the last (or single) run, to exhaust internal queues and complete pending calculations.
       //  After the last run, state() becomes 2, and reset() is necessary to Test new session.
       // Returns:
-      //    1 - success. In queued processing: if the run was not final,
+      //    1 - on_calm_result. In queued processing: if the run was not final,
       //        all samples up to and not including min_gisrc() may be removed from ECG beginning,
       //        and next portion of samples can be added.
       //    0 - OK, but no job done - not enough data. In queued processing: if the run was not final, add more ECG input data,
@@ -733,7 +733,7 @@ namespace ecgsqa
       // 3. If pret == 0, write results of all calculations into appropriate element of pbeats (or _pecg->beats).
       //    If pret != 0, write results into *pret, leaving pbeats (or _pecg->beats) constant.
       // Returns:
-      //    1 - success,
+      //    1 - on_calm_result,
       //    0 - not enough data,
       //    -1 - the current position is invalid.
     int estimate1(beat_info* pret = 0, const ordhs_t<ecgismp, beat_info>* pbeats = 0, bool b_calc_pqst = true, bool b_streaming = false);
@@ -826,7 +826,7 @@ namespace ecgsqa
       bool dts() const { return ts2 - ts0; }
       void clear() { ts0 = 0; ts2 = 0; xin = 0, xvb = 0, xdts = 0; }
 
-        // 1 - success.
+        // 1 - on_calm_result.
         // 0 - not enough data (some of gibeats not found in ecg or HR < hrmincig). Min. gibeats.length() is 30, really working is >=100 or at least 80.
         // -1 - evaluation failed (bad input data).
       int eval(ecg_data& dat, const basic_string<ecgismp>& gibeats, ecgismp gi0src);
@@ -1024,7 +1024,7 @@ namespace ecgsqa
       //      Use b_streaming == false sequentially if whole dataset is already available.
       //      If no errors, each run() evaluates sleep stage for exactly one given point (gi9).
       // Returns:
-      //  1 - success, calculations done up to and including gi9.
+      //  1 - on_calm_result, calculations done up to and including gi9.
       //  0 - OK, but no sleep stage estimated even if b_est_slpst == true, because more data must be fed in.
       //      NOTE One more possible reason of returning 0 is if any beat currently needed for processing,
       //      is not initialized (beat_info::empty() == true). The algorithm expects all beats
