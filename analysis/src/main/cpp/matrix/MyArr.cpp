@@ -1,32 +1,9 @@
 #include "MyArr.h"
 #include "TFftAlgorithm.h"
 
-MyArray readCsv(const string &fnp) {
-    MyArray arrResult;
-    string sdata;
-    // Load file from (fnp) to (sdata) All content
-    if (file_io::load_bytes(fnp, sdata) <= 0) { return arrResult; }
-    LOGD("file size %d", sdata.size());
-
-    const size_t end = string::npos;
-    int pos = 0, pos2, pos3;
-    int sLen = sdata.size();
-    while (pos < sLen) {
-        pos3 = pos2 = sdata.find('\n', pos);
-        if (pos2 == end) { pos2 = sdata.size(); }
-        if (pos2 > pos && sdata[pos2 - 1] == '\r') { --pos3; }
-        string s = sdata.substr(pos, pos3 - pos);
-        FLOAT fValue = ::atof(s.c_str());
-        arrResult.push_back(fValue);
-        pos = pos2 + 1;
-    }
-    LOGD("readCsv size %d", length(arrResult));
-    return arrResult;
-}
-
 MyArray subArray(MyArray arr, int from, int length) {
     MyArray data;
-    for (int i = from; i < from + length; ++i) {
+    for (unsigned int i = from; i < from + length; ++i) {
         data.push_back(arr.at(i));
     }
     return data;
@@ -35,7 +12,7 @@ MyArray subArray(MyArray arr, int from, int length) {
 MyArray pow2(MyArray a1) {
     MyArray data;
     int len = a1.size();
-    for (int i = 0; i < len; ++i) {
+    for (unsigned int i = 0; i < len; ++i) {
         data.push_back(a1.at(i) * a1.at(i));
     }
     return data;
@@ -68,12 +45,12 @@ MyArray fft(MyArray a1) {
 //    CFourier fft;
 //    FLOAT *data = myArrToFLOAT(a1);
 //    LOGD("----------------fft test BEGIN----------------");
-//    for (int i = 0; i < 20; ++i) {
+//    for (unsigned int i = 0; i < 20; ++i) {
 //        LOGD("float test %f", data[i]);
 //    }
 //    fft.ComplexFFT(data,a1.size(), a1.size(),1);
 //    LOGD("----------------fft test AFTER----------------");
-//    for (int i = 0; i < 20; ++i) {
+//    for (unsigned int i = 0; i < 20; ++i) {
 //        LOGD("float test %f", data[i]);
 //    }
 //    LOGD("----------------fft test   END----------------");
@@ -82,7 +59,7 @@ MyArray fft(MyArray a1) {
 
 MyArray rep(FLOAT value, int rep) {
     MyArray data;
-    for (int i = 0; i < rep; i++) {
+    for (unsigned int i = 0; i < rep; i++) {
         data.push_back(value);
     }
     return data;
@@ -91,11 +68,11 @@ MyArray rep(FLOAT value, int rep) {
 MyArray concat(MyArray a1, MyArray a2) {
     MyArray data;
     int len1 = a1.size();
-    for (int i = 0; i < len1; i++) {
+    for (unsigned int i = 0; i < len1; i++) {
         data.push_back(a1.at(i));
     }
     int len2 = a2.size();
-    for (int i = 0; i < len2; i++) {
+    for (unsigned int i = 0; i < len2; i++) {
         data.push_back(a2.at(i));
     }
     return data;
@@ -104,7 +81,7 @@ MyArray concat(MyArray a1, MyArray a2) {
 MyArray concat(MyArray a1, FLOAT f) {
     MyArray data;
     int len = a1.size();
-    for (int i = 0; i < len; i++) {
+    for (unsigned int i = 0; i < len; i++) {
         data.push_back(a1.at(i));
     }
     data.push_back(f);
@@ -116,7 +93,7 @@ MyArray arrayMul(MyArray a1, double v) {
     MyArray data;
     LOGD("mul %lf", v);
     int len = a1.size();
-    for (int i = 0; i < len; i++) {
+    for (unsigned int i = 0; i < len; i++) {
         data.push_back(a1.at(i) * v);
     }
     return data;
@@ -124,7 +101,7 @@ MyArray arrayMul(MyArray a1, double v) {
 
 MyArray seq(int from, int to) {
     MyArray data;
-    for (int i = from; i <= to; ++i) {
+    for (unsigned int i = from; i <= to; ++i) {
         data.push_back(i);
     }
     return data;
@@ -138,7 +115,7 @@ FLOAT *myArrToFLOAT(MyArray a1) {
     FLOAT *arrFLOAT;
     int len = a1.size();
     arrFLOAT = new FLOAT[len];
-    for (int i = 0; i < len; i++) {
+    for (unsigned int i = 0; i < len; i++) {
         arrFLOAT[i] = a1.at(i);
     }
     return arrFLOAT;
@@ -147,7 +124,7 @@ FLOAT *myArrToFLOAT(MyArray a1) {
 FLOAT sum(MyArray a) {
     FLOAT data = 0;
     int len = a.size();
-    for (int i = 0; i < len; ++i) {
+    for (unsigned int i = 0; i < len; ++i) {
         data += a.at(i);
     }
     return data;
@@ -161,7 +138,7 @@ MyExArray frame(MyArray a1, MyArray a2) {
     if (len1 != len2) {
         return data;
     }
-    for (int i = 0; i < len1; ++i) {
+    for (unsigned int i = 0; i < len1; ++i) {
         data.freq.push_back(a1.at(i));
         data.spec.push_back(a2.at(i));
     }
@@ -207,7 +184,7 @@ int length(MyExArray a) {
 MyArray getByIndexArr(MyArray dataArr, MyArray indexArr) {
     MyArray data;
     int len = length(indexArr);
-    for (int i = 0; i < len; i++) {
+    for (unsigned int i = 0; i < len; i++) {
 //      LOGD("for index %d length %d",i,length(data));
         data.push_back(dataArr.at((unsigned int) indexArr.at(i)));
     }
@@ -217,7 +194,7 @@ MyArray getByIndexArr(MyArray dataArr, MyArray indexArr) {
 MyArray condition1(MyExArray exArray) {
     MyArray data;
     int len = length(exArray);
-    for (int i = 0; i < len; i++) {
+    for (unsigned int i = 0; i < len; i++) {
         if (exArray.freq.at(i) >= 0.003 && exArray.freq.at(i) <= 0.04) {
             data.push_back(exArray.spec.at(i));
         }
@@ -228,7 +205,7 @@ MyArray condition1(MyExArray exArray) {
 MyArray condition2(MyExArray exArray) {
     MyArray data;
     int len = length(exArray);
-    for (int i = 0; i < len; i++) {
+    for (unsigned int i = 0; i < len; i++) {
         if (exArray.freq.at(i) >= 0.04 && exArray.freq.at(i) <= 0.15) {
             data.push_back(exArray.spec.at(i));
         }
@@ -239,7 +216,7 @@ MyArray condition2(MyExArray exArray) {
 MyArray condition3(MyExArray exArray) {
     MyArray data;
     int len = length(exArray);
-    for (int i = 0; i < len; i++) {
+    for (unsigned int i = 0; i < len; i++) {
         if (exArray.freq.at(i) >= 0.15 && exArray.freq.at(i) <= 0.40) {
             data.push_back(exArray.spec.at(i));
         }
@@ -249,13 +226,13 @@ MyArray condition3(MyExArray exArray) {
 
 void show(MyArray a1) {
     int len = length(a1);
-    for (int i = 0; i < len; ++i) {
+    for (unsigned int i = 0; i < len; ++i) {
         LOGE1("%d      %f", i, a1.at(i));
     }
 }
 void show(MyArray a1,string strFilter) {
     int len = length(a1);
-    for (int i = 0; i < len; ++i) {
+    for (unsigned int i = 0; i < len; ++i) {
         LOGE1("%s      %d      %f" ,strFilter.c_str(), i, a1.at(i));
     }
 }
@@ -265,7 +242,7 @@ void show(MyArray a1, int from, int _len) {
     if (to > len) {
         to = len;
     }
-    for (int i = from; i < to; ++i) {
+    for (unsigned int i = (unsigned int) from; i < to; ++i) {
         LOGD("%d      %f", i, a1.at(i));
     }
 }
@@ -274,7 +251,7 @@ MyExArray subsetC1(MyExArray exArray) {
     MyExArray result;
     int len = length(exArray);
 
-    for (int i = 0; i < len; i++) {
+    for (unsigned int i = 0; i < len; i++) {
         if (exArray.freq.at(i) >= 0.003 && exArray.freq.at(i) <= 0.04) {
             result.spec.push_back(exArray.spec.at(i));
             result.freq.push_back(exArray.freq.at(i));
@@ -286,7 +263,7 @@ MyExArray subsetC1(MyExArray exArray) {
 MyExArray subsetC2(MyExArray exArray) {
     MyExArray result;
     int len = length(exArray);
-    for (int i = 0; i < len; i++) {
+    for (unsigned int i = 0; i < len; i++) {
         if (exArray.freq.at(i) >= 0.04 && exArray.freq.at(i) <= 0.15) {
             result.spec.push_back(exArray.spec.at(i));
             result.freq.push_back(exArray.freq.at(i));
@@ -298,7 +275,7 @@ MyExArray subsetC2(MyExArray exArray) {
 MyExArray subsetC3(MyExArray exArray) {
     MyExArray result;
     int len = length(exArray);
-    for (int i = 0; i < len; i++) {
+    for (unsigned int i = 0; i < len; i++) {
         if (exArray.freq.at(i) >= 0.15 && exArray.freq.at(i) <= 0.40) {
             result.spec.push_back(exArray.spec.at(i));
             result.freq.push_back(exArray.freq.at(i));

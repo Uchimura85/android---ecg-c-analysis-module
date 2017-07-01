@@ -10,7 +10,7 @@
 MyArray rep(FLOAT value, int rep);
 MyArray concat(MyArray a1, MyArray a2);
 MyArray concat(MyArray a1, FLOAT f);
-MyArray readCsv(const string &fnp);
+
 MyArray subArray(MyArray arr,int from, int length);
 
 MyArray pow2(MyArray a1);

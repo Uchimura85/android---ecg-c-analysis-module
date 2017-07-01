@@ -10,7 +10,6 @@ import com.tool.sports.com.analysis.ECGLib.PipeLine;
 
 import java.io.File;
 import java.util.Date;
-import java.util.List;
 import java.util.Vector;
 
 
@@ -173,7 +172,7 @@ public class ProcessAnalysis extends AppCompatActivity {
 
 
     public int AlgoProcess(int data) {
-        int strAF_NORMAL_UNKNOWN= IS_UNKNOWN;
+        int strAF_NORMAL_UNKNOWN = IS_UNKNOWN;
         pipeline.add(data);
         if (pipeline.isDected()) {
             String str = "" + pipeline.getHeartRate();
@@ -225,6 +224,7 @@ public class ProcessAnalysis extends AppCompatActivity {
     Runnable calmRunnable = new Runnable() {
         @Override
         public void run() {
+            Log.d("runnableCalm", "run");
             calm();
         }
     };
@@ -274,6 +274,10 @@ public class ProcessAnalysis extends AppCompatActivity {
             thread.ac = this;
             thread.start();
             if (Static1.isCalmDebug) {
+                startCSVExport();
+                String strCSVSaveDirectory = getCalmSaveDirectory();
+                double []d={3,4};
+                AddEcgData(d, strCSVSaveDirectory, "test");
                 Th3CalmTester thread3 = new Th3CalmTester();
                 thread3.ac = this;
                 thread3.start();
@@ -366,22 +370,16 @@ class Th3CalmTester extends Thread {
 
     public void run() {
 
-        double[] newData = new double[TestData.data.length * 1];
-        for (int i = 0; i < TestData.data.length; i++) {
+        double[] newData = new double[TestDataRRI.data.length * 1];
+        for (int i = 0; i < TestDataRRI.data.length; i++) {
             for (int j = 0; j < 1; j++) {
-//                newData[TestData.data.length * j + i] = (TestData.data[i] - 1200) / 800f;
-                newData[TestData.data.length * j + i] = TestData.data[i];
+//                newData[TestDataRRI.data.length * j + i] = (TestDataRRI.data[i] - 1200) / 800f;
+                newData[TestDataRRI.data.length * j + i] = TestDataRRI.data[i];
             }
         }
         Log.d("steve testtesttest", newData.length + "");
-//        for (int i = 0; i < 30; i++)
-        ac.addEcgDataDouble(newData);
-//        ac.AddRRIData(newData);
-        try {
-            sleep(3000);
-
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
+//        for (int i = 0; i < 3; i++)
+//            ac.addEcgDataDouble(newData);
+        ac.AddRRIData(newData);
     }
 }

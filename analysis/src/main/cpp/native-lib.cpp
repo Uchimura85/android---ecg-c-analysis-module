@@ -127,6 +127,54 @@ Java_com_tool_sports_com_analysis_ProcessAnalysis_stdouterr(
     }
     return env->NewStringUTF(wsToBsUtf8(bsToWs(s)).c_str());
 }
+string dp, filename;
+int const FILETYPE_ECG = 0;
+int const FILETYPE_RRI = 1;
+int const FILETYPE_CALM = 2;
+int const FILETYPE_IRRI = 3;
+
+
+template<class arrayType>
+void saveCSV(arrayType _arrEcg, string _str_dp, string _str_filename, int type = 0) {
+    string filename = _str_filename;
+    LOGD("savecsv: dir: %s, filename: %s, nameLen: %d", _str_dp.c_str(), filename.c_str(),
+         filename.length());
+    if (filename.length() == 0) {
+        return;
+    }
+    switch (type) {
+        case FILETYPE_ECG:
+            filename += " ecg.csv";
+            break;
+        case FILETYPE_RRI:
+            filename += " rri.csv";
+            break;
+        case FILETYPE_CALM:
+            filename += " calm.csv";
+            break;
+        case FILETYPE_IRRI:
+            filename += " irri.csv";
+            break;
+
+        default:
+            break;
+    }
+    // BEGIN file write
+    chdir(_str_dp.c_str());
+    int len = _arrEcg.size();
+    string strForFile = "length = " + itocs(len, 12) + "\r\n";
+    strForFile = "";// ignore Length;
+    for (unsigned int i = 0; i < len; i++) {
+        strForFile += ftocs(_arrEcg.at(i), 6, 8);
+        strForFile += "\r\n";
+    }
+    int fres = file_io::save_bytes(filename.c_str(), strForFile, true);
+    LOGD("savecsvresult: file: %s, content length: %d, on_calm_result: %d", filename.c_str(),
+         strForFile.length(), fres);
+    // END file write
+}
+
+
 extern "C"
 JNIEXPORT void JNICALL
 Java_com_tool_sports_com_analysis_ProcessAnalysis_analysisFile(
@@ -159,6 +207,7 @@ Java_com_tool_sports_com_analysis_ProcessAnalysis_analysisFile(
     } catch (...) {}
 }
 
+
 extern "C"
 JNIEXPORT void JNICALL
 Java_com_tool_sports_com_analysis_ProcessAnalysis_wfdbExport(JNIEnv *env,
@@ -185,24 +234,36 @@ Java_com_tool_sports_com_analysis_ProcessAnalysis_wfdbExport(JNIEnv *env,
         char *argv[1] = {str2ch(strParam)};
         cout << "===========================\r\n";
 
-        res1 = wfdb_export(1, argv);
+
         cout << "RETVAL: " << res1 << endl;
         system(__strSystem.c_str());
 
     } catch (...) {}
 }
 
-int window_size = 250 * 30; // 5 minutes
-int interval = 250 * 30;// 1 minutes
+int window_size = 256 * 64; // 5 minutes
+int interval = 256 * 32;// 1
+
+
+
+bool isStart = true;
 
 MyReturnValue VLFLFHF(MyArray data) {
 
-    int samplefreq = 250; // 250Hz
+    int samplefreq = 256; // 250Hz
     MyArray n = seq(0, (window_size - 1));
     MyArray freq = arrayMul(n, samplefreq / (FLOAT) window_size);
-
+    saveCSV(freq, dp, "VLFLFHF 1", FILETYPE_IRRI);
     //MyArray spec = pow2(fft(data));
     MyArray spec = fft(data); // calculate abs(fft(data)) ^ 2 in fft() function
+    if (isStart) {
+//        for (unsigned int i = 0; i < 50; i++) {
+//            LOGD("testestt  %f", data.at(i));
+//        }
+        isStart = false;
+        saveCSV(data, dp, "test vlflfhf data", FILETYPE_IRRI);
+        saveCSV(spec, dp, "test vlflfhf fft", FILETYPE_IRRI);
+    }
 //    show(spec);
     LOGD("VLFLFHF length of data %d %d", length(n), length(data));
     MyExArray PS = frame(freq, spec);
@@ -221,8 +282,7 @@ MyReturnValue VLFLFHF(MyArray data) {
 
     FLOAT vlf_dif = 0;
     for (unsigned int x = 0; x < (nrow(vlf) - 1); x++) {
-        vlf_dif = sum(abs(vlf.spec.at(x + 1) - vlf.spec.at(x)),
-                      vlf_dif);
+        vlf_dif = sum(abs(vlf.spec.at(x + 1) - vlf.spec.at(x)), vlf_dif);
     }
     LOGD("vlf_dif                    %f", vlf_dif);
     vlf_dif = vlf_dif / (FLOAT) length(condition1(PS));
@@ -341,48 +401,7 @@ Java_com_tool_sports_com_analysis_ProcessAnalysis_calmnessEntry(JNIEnv *, jobjec
         cerr << endl << "C++ exception" << endl;
     }
 }
-int const FILETYPE_ECG = 0;
-int const FILETYPE_RRI = 1;
-int const FILETYPE_CALM = 2;
 
-template<class arrayType>
-void saveCSV(arrayType _arrEcg, string _str_dp, string _str_filename, int type = 0) {
-    string filename = _str_filename;
-    LOGD("savecsv: dir: %s, filename: %s, nameLen: %d", _str_dp.c_str(), filename.c_str(),
-         filename.length());
-    if (filename.length() == 0) {
-        return;
-    }
-    switch (type) {
-        case FILETYPE_ECG:
-            filename += " ecg.csv";
-            break;
-        case FILETYPE_RRI:
-            filename += " rri.csv";
-            break;
-        case FILETYPE_CALM:
-            filename += " calm.csv";
-            break;
-        default:
-            break;
-    }
-    // BEGIN file write
-    chdir(_str_dp.c_str());
-    int len = _arrEcg.size();
-    string strForFile = "length = " + itocs(len, 12) + "\r\n";
-    strForFile = "";// ignore Length;
-    for (unsigned int i = 0; i < len; i++) {
-        strForFile += ftocs(_arrEcg.at(i), 6, 8);
-        strForFile += "\r\n";
-    }
-    int fres = file_io::save_bytes(filename.c_str(), strForFile, true);
-    LOGD("savecsvresult: file: %s, content length: %d, on_calm_result: %d", filename.c_str(),
-         strForFile.length(), fres);
-    // END file write
-}
-
-
-string dp, filename;
 
 void outHeartRate(MyArray arr_RRI) {
     int len = arr_RRI.size();
@@ -464,17 +483,29 @@ Java_com_tool_sports_com_analysis_ProcessAnalysis_AddRRIData(JNIEnv *env, jobjec
         myarrayRRI.push_back(vecRRI.at(i));
         LOGE1("RRI value %d             %f", i, vecRRI.at(i));
     }
+//begin fft test
+//    double d[] = {0.6, 129, 1000, 4, 6, 2, 3, 7};
+//    MyArray data;
+//    for (int i = 0; i < sizeof(d) / sizeof(double); i++) {
+//        data.push_back(d[i]);
+//    }
+//
+//
+//    MyArray g = fft(data);
+//    show(data, "ffttest data");
+//    show(g, "ffttest fft");
 
+//end fft test
     calmnessDataSrc(myarrayRRI);
 
 }
+bool isFFirst = true;
 
 void calmnessDataSrc(MyArray RRI) {
-    LOGE1("---------------------------src size %d", length(RRI));
+
     //2. Generate IRRI from RRI data
-
     int allLength = length(RRI);
-
+    LOGE1("---------------- rri -----------calmness Data Src size %d", allLength);
     MyArray IRRI;
     for (unsigned int i = 0; i < allLength; i++) {
         MyArray X = rep(RRI.at(i), (int) (RRI.at(i) * 250));
@@ -484,6 +515,12 @@ void calmnessDataSrc(MyArray RRI) {
             IRRI = concat(IRRI, X);
         }
     }
+//    if (isFFirst) {
+    isFFirst = false;
+    for (unsigned int i = 0; i < 50; i++) {
+        LOGD("testestt  %f", IRRI.at(i));
+    }
+    //}
     calmnessAlgo(IRRI);
 }
 
@@ -503,11 +540,10 @@ void calmnessAlgo(MyArray IRRI) {
     int count = length(IRRI) - window_size;
     int nTimes = count / interval;
     int remain = count % interval;
-
-    LOGE1("count of for (ceil) %d,preIRRI=%d    IRRI size = %d remain = %d, nTimes= %d", count,
-          length(preIRRI), length(IRRI),
-          remain, nTimes);
-
+    nTimes = 1;
+    LOGE1("calmnessAlgo: count = %d, preIRRI=%d    IRRI size = %d remain = %d, nTimes= %d", count,
+          length(preIRRI), length(IRRI), remain, nTimes);
+//    saveCSV(IRRI, dp, "test", FILETYPE_IRRI);
     if (count <= 0 || nTimes <= 0) {
         LOGE1("count of nTimes < 0");
         preIRRI = IRRI;
@@ -518,11 +554,16 @@ void calmnessAlgo(MyArray IRRI) {
 
 //    count = count - remain;
     for (int i = 0; i < nTimes * interval; i += interval) {
-        LOGE1(" %d   count of for (ceil) %d,    IRRI size = %d remain = %d rLength = %d, nTimes= %d, ",
-              i, count, length(IRRI), remain, length(preIRRI), nTimes);
+//        LOGE1(" %d   count of for (ceil) %d,    IRRI size = %d remain = %d rLength = %d, nTimes= %d, ",
+//              i, count, length(IRRI), remain, length(preIRRI), nTimes);
         MyArray arrSeq = seq(i, i + window_size - 1);
+//        if (i == 0)
+//            for (unsigned int i = 0; i < 50; i++) {
+//                LOGD("testestt  %f", IRRI.at(i));
+//            }
         MyArray arrByIndex = getByIndexArr(IRRI, arrSeq);
         MyReturnValue _VLFLFHF = VLFLFHF(arrByIndex);
+
         ar_vlf_sum = concat(ar_vlf_sum, _VLFLFHF.vlf_sum);
         ar_lf_sum = concat(ar_lf_sum, _VLFLFHF.lf_sum);
         ar_hf_sum = concat(ar_hf_sum, _VLFLFHF.hf_sum);
@@ -577,7 +618,8 @@ void calmnessAlgo(MyArray IRRI) {
             if (_calm2 > 100)_calm2 = 100;
             if (_calm2 < 0)_calm2 = 0;
             calmness2.push_back(_calm2);
-            LOGE1("calmness_2  %d   PR= %f DR= %f calm2 = %f", i, PR, DR, _calm2);
+            LOGE1("calmness_2                                                                  calm2 = %f",
+                  _calm2);
 
         }
     }

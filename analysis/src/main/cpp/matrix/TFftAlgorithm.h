@@ -47,8 +47,8 @@ public:
         y = new TKomplex[N + 1];
         xw = new double[N + 1];
         we = new TKomplex[N / 2];
-        for (i = 0; i < (N /
-                         2); i++) {                           // Init look up table for sine and cosine values
+        for (i = 0; i < N / 2; i++) {
+            // Init look up table for sine and cosine values
             we[i].real = cos(2.0 * PI * (double) (i) / (double) (N));
             we[i].imag = sin(2.0 * PI * (double) (i) / (double) (N));
         }
@@ -68,6 +68,7 @@ public:
     }
 
     void CalcSubFFT(TKomplex *a, int n, int lo) {
+
         int i, m;
         TKomplex w;
         TKomplex v;
@@ -82,8 +83,8 @@ public:
                 w.real = we[(i - lo) * N / n].real;
                 w.imag = we[(i - lo) * N / n].imag;
                 // classic calculation of sine and cosine values
-                //w.real = Math.Cos(2.0 * Math.PI * (double)(i - lo) / (double)(n));
-                //w.imag = Math.Sin(2.0 * Math.PI * (double)(i - lo) / (double)(n));
+//                w.real = cos(2.0 * PI * (double)(i - lo) / (double)(n));
+//                w.imag = sin(2.0 * PI * (double)(i - lo) / (double)(n));
                 h = kprod(a[i + m], w);
                 v = a[i];
                 a[i] = ksum(a[i], h);
@@ -179,11 +180,24 @@ public:
         return data;
     }
 
+    bool FFFisFirst = true;
+
     MyArray getAbsPow2() {
         MyArray data;
+        //fMul = 1;
+        if (FFFisFirst) {
+            FFFisFirst = false;
+            int n = min(20, N);
+            for (int i = 0; i < n; i++) {
+                LOGD("ffttest getabsPow2 %d ->  %f  ,   %f      ,%f", i, y[i].real * fMul,
+                     y[i].imag * fMul,
+                     fMul);
+            }
+        }
         for (int i = 0; i < this->N; i++) {
+
             FLOAT v = (FLOAT) (y[i].real * y[i].real + y[i].imag * y[i].imag);
-            data.push_back(v * fMul *fMul);
+            data.push_back(v * fMul * fMul);
         }
         return data;
     }
