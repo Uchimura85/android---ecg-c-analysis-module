@@ -245,33 +245,30 @@ int window_size = 256 * 64; // 5 minutes
 int interval = 256 * 32;// 1
 
 
-
-bool isStart = true;
-
 MyReturnValue VLFLFHF(MyArray data) {
 
     int samplefreq = 256; // 250Hz
     MyArray n = seq(0, (window_size - 1));
     MyArray freq = arrayMul(n, samplefreq / (FLOAT) window_size);
-    saveCSV(freq, dp, "VLFLFHF 1", FILETYPE_IRRI);
+    saveCSV(freq, dp, "VLFLFHF 1 ", FILETYPE_IRRI);
     //MyArray spec = pow2(fft(data));
     MyArray spec = fft(data); // calculate abs(fft(data)) ^ 2 in fft() function
-    if (isStart) {
-//        for (unsigned int i = 0; i < 50; i++) {
-//            LOGD("testestt  %f", data.at(i));
-//        }
-        isStart = false;
-        saveCSV(data, dp, "test vlflfhf data", FILETYPE_IRRI);
-        saveCSV(spec, dp, "test vlflfhf fft", FILETYPE_IRRI);
-    }
-//    show(spec);
+
+    saveCSV(data, dp, "test vlflfhf data", FILETYPE_IRRI);
+    saveCSV(spec, dp, "test vlflfhf fft", FILETYPE_IRRI);
+
     LOGD("VLFLFHF length of data %d %d", length(n), length(data));
     MyExArray PS = frame(freq, spec);
 
     // summarize spectrum power
     FLOAT vlf_sum = sum(condition1(PS)) / (FLOAT) length(condition1(PS));
+
     FLOAT lf_sum = sum(condition2(PS)) / (FLOAT) length(condition2(PS));
     FLOAT hf_sum = sum(condition3(PS)) / (FLOAT) length(condition3(PS));
+    LOGD("vvvvvv vlf_sum %f", vlf_sum);
+    LOGD("vvvvvv lf_sum %f", lf_sum);
+    LOGD("vvvvvv hf_sum %f", hf_sum);
+
 //    MyArray testT = condition1(PS);
 //        show(testT);
     // summarize spectrum difference
@@ -279,12 +276,18 @@ MyReturnValue VLFLFHF(MyArray data) {
     MyExArray lf = subsetC2(PS);
     MyExArray hf = subsetC3(PS);
     LOGD("VLFLFHF step3 %d %d %d", length(vlf), length(lf), length(hf));
+//    show(vlf.spec, "VLFLFHF step3 vlf");
+//    LOGE1("");
+//    show(lf.spec, "VLFLFHF step3 lf");
+//    LOGE1("");
+//    show(hf.spec, "VLFLFHF step3 hf");
+//    LOGE1("");
 
     FLOAT vlf_dif = 0;
     for (unsigned int x = 0; x < (nrow(vlf) - 1); x++) {
         vlf_dif = sum(abs(vlf.spec.at(x + 1) - vlf.spec.at(x)), vlf_dif);
     }
-    LOGD("vlf_dif                    %f", vlf_dif);
+
     vlf_dif = vlf_dif / (FLOAT) length(condition1(PS));
 
     FLOAT lf_dif = 0;
@@ -300,7 +303,8 @@ MyReturnValue VLFLFHF(MyArray data) {
     hf_dif = hf_dif / (FLOAT) length(condition3(PS));
 
     MyReturnValue rtn;
-    LOGD("-----------  %f, %f, %f, %f, %f, %f", vlf_sum, lf_sum, hf_sum, vlf_dif, lf_dif, hf_dif);
+    LOGD("-----------vlfdiffffff  %f, %f, %f, %f, %f, %f", vlf_sum, lf_sum, hf_sum, vlf_dif, lf_dif,
+         hf_dif);
     rtn.vlf_sum = vlf_sum;
     rtn.lf_sum = lf_sum;
     rtn.hf_sum = hf_sum;
@@ -540,7 +544,6 @@ void calmnessAlgo(MyArray IRRI) {
     int count = length(IRRI) - window_size;
     int nTimes = count / interval;
     int remain = count % interval;
-    nTimes = 1;
     LOGE1("calmnessAlgo: count = %d, preIRRI=%d    IRRI size = %d remain = %d, nTimes= %d", count,
           length(preIRRI), length(IRRI), remain, nTimes);
 //    saveCSV(IRRI, dp, "test", FILETYPE_IRRI);
@@ -586,27 +589,21 @@ void calmnessAlgo(MyArray IRRI) {
     FLOAT b = 50;
     int len = length(df_VLFLFHF);
     MyArray calmness, calmness2;
-
+    LOGE1("lengthlength %d", len);
     for (unsigned int i = 0; i < len; i++) {
         FLOAT PR = (
-                           max(df_VLFLFHF.ar_vlf_sum.at(i), df_VLFLFHF.ar_lf_sum.at(i),
-                               df_VLFLFHF.ar_hf_sum.at(i))
+                           max(df_VLFLFHF.ar_lf_sum.at(i), df_VLFLFHF.ar_hf_sum.at(i))
                            -
-                           min(df_VLFLFHF.ar_vlf_sum.at(i), df_VLFLFHF.ar_lf_sum.at(i),
-                               df_VLFLFHF.ar_hf_sum.at(i))
+                           min(df_VLFLFHF.ar_lf_sum.at(i), df_VLFLFHF.ar_hf_sum.at(i))
                    )
-                   / sum(df_VLFLFHF.ar_vlf_sum.at(i), df_VLFLFHF.ar_lf_sum.at(i),
-                         df_VLFLFHF.ar_hf_sum.at(i));
+                   / sum(df_VLFLFHF.ar_lf_sum.at(i), df_VLFLFHF.ar_hf_sum.at(i));
 
         FLOAT DR = (
-                           max(df_VLFLFHF.ar_vlf_dif.at(i), df_VLFLFHF.ar_lf_dif.at(i),
-                               df_VLFLFHF.ar_hf_dif.at(i))
+                           max(df_VLFLFHF.ar_lf_dif.at(i), df_VLFLFHF.ar_hf_dif.at(i))
                            -
-                           min(df_VLFLFHF.ar_vlf_dif.at(i), df_VLFLFHF.ar_lf_dif.at(i),
-                               df_VLFLFHF.ar_hf_dif.at(i))
+                           min(df_VLFLFHF.ar_lf_dif.at(i), df_VLFLFHF.ar_hf_dif.at(i))
                    )
-                   / sum(df_VLFLFHF.ar_vlf_dif.at(i), df_VLFLFHF.ar_lf_dif.at(i),
-                         df_VLFLFHF.ar_hf_dif.at(i));
+                   / sum(df_VLFLFHF.ar_lf_dif.at(i), df_VLFLFHF.ar_hf_dif.at(i));
         FLOAT _calm = a * PR + b * DR;
         if (1) {
             t_lock_MyArray __lock;

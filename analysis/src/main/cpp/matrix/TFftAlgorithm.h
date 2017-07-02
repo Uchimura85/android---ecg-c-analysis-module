@@ -180,20 +180,9 @@ public:
         return data;
     }
 
-    bool FFFisFirst = true;
-
     MyArray getAbsPow2() {
         MyArray data;
-        //fMul = 1;
-        if (FFFisFirst) {
-            FFFisFirst = false;
-            int n = min(20, N);
-            for (int i = 0; i < n; i++) {
-                LOGD("ffttest getabsPow2 %d ->  %f  ,   %f      ,%f", i, y[i].real * fMul,
-                     y[i].imag * fMul,
-                     fMul);
-            }
-        }
+        fMul = 1;
         for (int i = 0; i < this->N; i++) {
 
             FLOAT v = (FLOAT) (y[i].real * y[i].real + y[i].imag * y[i].imag);
