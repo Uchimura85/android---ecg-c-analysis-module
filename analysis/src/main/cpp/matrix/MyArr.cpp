@@ -3,7 +3,20 @@
 
 MyArray subArray(MyArray arr, int from, int length) {
     MyArray data;
-    for (unsigned int i = from; i < from + length; ++i) {
+
+    int until = from + length;
+    for (unsigned int i = (unsigned int) from; i < until; ++i) {
+        data.push_back(arr.at(i));
+    }
+
+    return data;
+}
+
+MyArray subArray(MyArray arr, int from) {
+    MyArray data;
+    int len = arr.size();
+
+    for (unsigned int i = (unsigned int) from; i < len; ++i) {
         data.push_back(arr.at(i));
     }
     return data;
@@ -230,12 +243,14 @@ void show(MyArray a1) {
         LOGE1("%d      %f", i, a1.at(i));
     }
 }
-void show(MyArray a1,string strFilter) {
+
+void show(MyArray a1, string strFilter) {
     int len = length(a1);
     for (unsigned int i = 0; i < len; ++i) {
-        LOGE1("%s      %d      %f" ,strFilter.c_str(), i, a1.at(i));
+        LOGE1("%s      %d      %f", strFilter.c_str(), i, a1.at(i));
     }
 }
+
 void show(MyArray a1, int from, int _len) {
     int to = from + _len;
     int len = length(a1);

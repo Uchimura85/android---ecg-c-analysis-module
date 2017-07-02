@@ -12,6 +12,7 @@ MyArray concat(MyArray a1, MyArray a2);
 MyArray concat(MyArray a1, FLOAT f);
 
 MyArray subArray(MyArray arr,int from, int length);
+MyArray subArray(MyArray arr, int from);
 
 MyArray pow2(MyArray a1);
 MyArray fft(MyArray a1);

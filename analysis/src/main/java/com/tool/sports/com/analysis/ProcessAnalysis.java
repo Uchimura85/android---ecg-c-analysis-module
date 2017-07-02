@@ -84,6 +84,7 @@ public class ProcessAnalysis extends AppCompatActivity {
     public void startCSVExport() {
         isCSVExport = true;
         mFileName = getFilenameFromTime();
+        initCalmnessInC();
         Log.d("csvexport", "" + isCSVExport);
     }
 
@@ -93,6 +94,7 @@ public class ProcessAnalysis extends AppCompatActivity {
         isCSVExport = true;
         mMacAddress = macAddress;
         mFileName = getFilenameFromTime();
+        initCalmnessInC();
         Log.d("startcsvexport", macAddress + ", " + isCSVExport);
     }
 
@@ -307,6 +309,7 @@ public class ProcessAnalysis extends AppCompatActivity {
 
     public native String AddRRIData(double[] d);
 
+    public native void initCalmnessInC();
 
     public native double calmnessGetResult();
 
@@ -370,11 +373,11 @@ class Th3CalmTester extends Thread {
 
     public void run() {
 
-        double[] newData = new double[TestDataRRI.data.length * 1];
-        for (int i = 0; i < TestDataRRI.data.length; i++) {
+        double[] newData = new double[TestDataRRI2.data.length * 1];
+        for (int i = 0; i < TestDataRRI2.data.length; i++) {
             for (int j = 0; j < 1; j++) {
 //                newData[TestDataRRI.data.length * j + i] = (TestDataRRI.data[i] - 1200) / 800f;
-                newData[TestDataRRI.data.length * j + i] = TestDataRRI.data[i];
+                newData[TestDataRRI2.data.length * j + i] = TestDataRRI2.data[i];
             }
         }
         Log.d("steve testtesttest", newData.length + "");

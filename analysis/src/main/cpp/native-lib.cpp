@@ -250,12 +250,8 @@ MyReturnValue VLFLFHF(MyArray data) {
     int samplefreq = 256; // 250Hz
     MyArray n = seq(0, (window_size - 1));
     MyArray freq = arrayMul(n, samplefreq / (FLOAT) window_size);
-    saveCSV(freq, dp, "VLFLFHF 1 ", FILETYPE_IRRI);
     //MyArray spec = pow2(fft(data));
     MyArray spec = fft(data); // calculate abs(fft(data)) ^ 2 in fft() function
-
-    saveCSV(data, dp, "test vlflfhf data", FILETYPE_IRRI);
-    saveCSV(spec, dp, "test vlflfhf fft", FILETYPE_IRRI);
 
     LOGD("VLFLFHF length of data %d %d", length(n), length(data));
     MyExArray PS = frame(freq, spec);
@@ -529,8 +525,14 @@ void calmnessDataSrc(MyArray RRI) {
 }
 
 MyArray preIRRI;
+extern "C"
+JNIEXPORT void JNICALL
+Java_com_tool_sports_com_analysis_ProcessAnalysis_initCalmnessInC(JNIEnv *, jobject) {
+    preIRRI.clear();
+}
 
 void calmnessAlgo(MyArray IRRI) {
+    LOGE1("calmness_algo: function input = %d", length(IRRI));
     // Calculate
     MyArray ar_vlf_sum;
     MyArray ar_lf_sum;
@@ -540,31 +542,23 @@ void calmnessAlgo(MyArray IRRI) {
     MyArray ar_lf_dif;
     MyArray ar_hf_dif;
 
-    IRRI = concat(preIRRI, IRRI);
-    int count = length(IRRI) - window_size;
+    preIRRI = concat(preIRRI, IRRI); // push to Global queue
+    int count = length(preIRRI) - window_size;
     int nTimes = count / interval;
-    int remain = count % interval;
-    LOGE1("calmnessAlgo: count = %d, preIRRI=%d    IRRI size = %d remain = %d, nTimes= %d", count,
-          length(preIRRI), length(IRRI), remain, nTimes);
-//    saveCSV(IRRI, dp, "test", FILETYPE_IRRI);
+
+    LOGE1("calmness_algo: count = %d, preIRRI = %d nTimes= %d", count, length(preIRRI), nTimes);
+
     if (count <= 0 || nTimes <= 0) {
-        LOGE1("count of nTimes < 0");
-        preIRRI = IRRI;
+        LOGE1("calmness_algo: count of nTimes < 0");
         return;
-    } else {
-        preIRRI = subArray(IRRI, nTimes * interval, remain);
     }
 
-//    count = count - remain;
     for (int i = 0; i < nTimes * interval; i += interval) {
 //        LOGE1(" %d   count of for (ceil) %d,    IRRI size = %d remain = %d rLength = %d, nTimes= %d, ",
 //              i, count, length(IRRI), remain, length(preIRRI), nTimes);
         MyArray arrSeq = seq(i, i + window_size - 1);
-//        if (i == 0)
-//            for (unsigned int i = 0; i < 50; i++) {
-//                LOGD("testestt  %f", IRRI.at(i));
-//            }
-        MyArray arrByIndex = getByIndexArr(IRRI, arrSeq);
+
+        MyArray arrByIndex = getByIndexArr(preIRRI, arrSeq);
         MyReturnValue _VLFLFHF = VLFLFHF(arrByIndex);
 
         ar_vlf_sum = concat(ar_vlf_sum, _VLFLFHF.vlf_sum);
@@ -575,6 +569,9 @@ void calmnessAlgo(MyArray IRRI) {
         ar_lf_dif = concat(ar_lf_dif, _VLFLFHF.lf_dif);
         ar_hf_dif = concat(ar_hf_dif, _VLFLFHF.hf_dif);
     }
+    LOGE1("calmness_algo: remove From First %d %d, %d", length(preIRRI), nTimes * interval,
+          length(preIRRI) - nTimes * interval);
+    preIRRI = subArray(preIRRI, nTimes * interval);
 
     My6Array df_VLFLFHF;
     df_VLFLFHF.ar_vlf_sum = ar_vlf_sum;
