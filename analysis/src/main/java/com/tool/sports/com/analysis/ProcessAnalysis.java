@@ -9,7 +9,9 @@ import android.util.Log;
 import com.tool.sports.com.analysis.ECGLib.PipeLine;
 
 import java.io.File;
-import java.util.Date;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.util.Calendar;
 import java.util.Vector;
 
 
@@ -22,54 +24,10 @@ public class ProcessAnalysis extends AppCompatActivity {
     // Constructor
     public ProcessAnalysis() {
         Log.d(TAG, "Constructor");
-//        _checkPermission();
 
         mFileName = getFilenameFromTime();
         pipeline = new PipeLine();
         pipeline.init(250, 5);
-    }
-
-    /*
-        private final static int REQUEST_PERMISSION_REQ_CODE = 34; // any 8-bit number
-
-        private boolean _checkPermission() {
-            if (ContextCompat.checkSelfPermission(this.getApplicationContext(), Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
-                // When user pressed Deny and still wants to use this functionality, show the rationale
-                if (ActivityCompat.shouldShowRequestPermissionRationale(this, Manifest.permission.WRITE_EXTERNAL_STORAGE)) {
-                }
-
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                    requestPermissions(new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE}, REQUEST_PERMISSION_REQ_CODE);
-                }
-            }
-            if (ContextCompat.checkSelfPermission(this.getApplicationContext(), Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
-                // When user pressed Deny and still wants to use this functionality, show the rationale
-                if (ActivityCompat.shouldShowRequestPermissionRationale(this, Manifest.permission.READ_EXTERNAL_STORAGE)) {
-                }
-
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                    requestPermissions(new String[]{Manifest.permission.READ_EXTERNAL_STORAGE}, REQUEST_PERMISSION_REQ_CODE);
-                }
-            }
-
-            return false;
-        }
-
-        //*/
-    @SuppressWarnings("deprecation")
-    public String getFilenameFromTime() {
-        Date date = new Date();
-//        int y = date.getYear();
-        int m = date.getMonth();
-        int d = date.getDate();
-        int h = date.getHours();
-        int min = date.getMinutes();
-//        int sec = date.getSeconds();
-        String[] MONTH = {"Jan", "Feb", "Mar", "Apr", "May", "Jun",
-                "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"};
-        String str = MONTH[m] + "-" + d + " " + h + "-" + min;
-        Log.d("testtest", str);
-        return str;
     }
 
     @Override
@@ -77,6 +35,48 @@ public class ProcessAnalysis extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.main_layout);
         Log.d(TAG, "onCreate");
+    }
+
+    public void startSleepAnalysis() {
+        ThAnalysis threadSleepAnalysis = new ThAnalysis();
+        threadSleepAnalysis.ac = this;
+        threadSleepAnalysis.start();
+
+        ThAnalysisResult threadSleepResult = new ThAnalysisResult();
+        threadSleepResult.ac = this;
+        threadSleepResult.start();
+    }
+
+    public void startCalm() {
+        Log.d(TAG, "Calm");
+
+        if (Static1.ncalm == 0) {
+            Static1.ncalm += 1;
+
+            ThCalmResult thread = new ThCalmResult();
+            thread.ac = this;
+            thread.start();
+            if (Static1.isCalmDebug) {
+                startCSVExport();
+                String strCSVSaveDirectory = getCalmSaveDirectory();
+                double[] d = {3, 4};
+                AddEcgData(d, strCSVSaveDirectory, "test");
+                ThCalmTester thread3 = new ThCalmTester();
+                thread3.ac = this;
+                thread3.start();
+            }
+        }
+    }
+
+    public String getFilenameFromTime() {
+        final Calendar c = Calendar.getInstance();
+        int m = c.get(Calendar.MONTH);
+        int d = c.get(Calendar.DATE);
+        int h = c.get(Calendar.HOUR_OF_DAY);
+        int min = c.get(Calendar.MINUTE);
+
+        String[] MONTH = {"Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"};
+        return MONTH[m] + "-" + d + " " + h + "-" + min;
     }
 
     private boolean isCSVExport = false;
@@ -98,7 +98,6 @@ public class ProcessAnalysis extends AppCompatActivity {
         Log.d("startcsvexport", macAddress + ", " + isCSVExport);
     }
 
-
     public void stopCSVExport() {
         isCSVExport = false;
         Log.d("csvexport", "" + isCSVExport);
@@ -110,11 +109,7 @@ public class ProcessAnalysis extends AppCompatActivity {
         onCalmnessCallback = callbacks;
     }
 
-    Vector<Double> mEcgArray = new Vector<>();
-
-    @SuppressWarnings("MismatchedReadAndWriteOfArray")
-
-    String SAVE_DIRECTORY = "Report";
+    public static String SAVE_DIRECTORY = "Report";
 
     private String getCalmSaveDirectory() {
         String strSDCard = Environment.getExternalStorageDirectory().getPath();
@@ -138,19 +133,21 @@ public class ProcessAnalysis extends AppCompatActivity {
         return (int) ((ecgVal) * 800f + 1200);
     }
 
+    Vector<Double> mEcgArray = new Vector<>();
+
     public int addEcgDataOne(int ecgVal) {
         mEcgArray.add(ecgTransform(ecgVal));
         Log.d("addEcgDataOne", "" + ecgVal + " queue size: " + mEcgArray.size());
 
         handler.postDelayed(calmRunnable, 0);
-        return AlgoProcess(ecgVal);
+        return ecg_af_analysis(ecgVal);
     }
 
     public void addEcgData(int[] nArrData) {
 
         for (int ecgVal : nArrData) {
             mEcgArray.add(ecgTransform(ecgVal));
-            AlgoProcess(ecgVal);
+            ecg_af_analysis(ecgVal);
         }
         handler.postDelayed(calmRunnable, 0);
     }
@@ -158,7 +155,7 @@ public class ProcessAnalysis extends AppCompatActivity {
     public void addEcgDataDouble(double[] fData) {
         for (double doubleEcgVal : fData) {
             mEcgArray.add(doubleEcgVal);
-            AlgoProcess(ecg_No_Transform(doubleEcgVal));
+            ecg_af_analysis(ecg_No_Transform(doubleEcgVal));
         }
         handler.postDelayed(calmRunnable, 0);
     }
@@ -173,12 +170,11 @@ public class ProcessAnalysis extends AppCompatActivity {
     public static int IS_AF = 1;
 
 
-    public int AlgoProcess(int data) {
+    public int ecg_af_analysis(int data) {
         int strAF_NORMAL_UNKNOWN = IS_UNKNOWN;
         pipeline.add(data);
         if (pipeline.isDected()) {
             String str = "" + pipeline.getHeartRate();
-//            setHRSValueOnView(pipeline.getHeartRate());
 
             Log.d("Heartrate", str);
 //			bpmView.setText(str);
@@ -250,6 +246,7 @@ public class ProcessAnalysis extends AppCompatActivity {
         }
     }
 
+
     public static boolean createDirIfNotExists(String path) {
         boolean ret = true;
 
@@ -264,37 +261,6 @@ public class ProcessAnalysis extends AppCompatActivity {
         }
 
         return ret;
-    }
-
-    public void startCalm() {
-        Log.d(TAG, "Calm");
-
-        if (Static1.ncalm == 0) {
-            Static1.ncalm += 1;
-
-            Th2CalmResult thread = new Th2CalmResult();
-            thread.ac = this;
-            thread.start();
-            if (Static1.isCalmDebug) {
-                startCSVExport();
-                String strCSVSaveDirectory = getCalmSaveDirectory();
-                double []d={3,4};
-                AddEcgData(d, strCSVSaveDirectory, "test");
-                Th3CalmTester thread3 = new Th3CalmTester();
-                thread3.ac = this;
-                thread3.start();
-            }
-        }
-    }
-
-    boolean isRecording = false;
-
-    public void startRecord() {
-        isRecording = true;
-    }
-
-    public void stopRecord() {
-        isRecording = false;
     }
 
     public void callback(String str) {
@@ -315,20 +281,18 @@ public class ProcessAnalysis extends AppCompatActivity {
 
     public native double HeartRateGetResult();
 
-
     //    public native void TestCallback();
     public native String stdouterr();
 
     public native void analysisFile(String datapath, String filename);
 //    public native void wfdbExport(String datapath,String filename);
 
-    // Used to load the 'native-lib' library on application startup.
     static {
         System.loadLibrary("native-lib");
     }
 }
 
-class Th2CalmResult extends Thread {
+class ThCalmResult extends Thread {
 
     ProcessAnalysis ac;
 
@@ -359,7 +323,7 @@ class Th2CalmResult extends Thread {
     }
 }
 
-class Th2Analysis extends Thread {
+class ThAnalysis extends Thread {
     ProcessAnalysis ac;
 
     public void run() {
@@ -368,7 +332,49 @@ class Th2Analysis extends Thread {
     }
 }
 
-class Th3CalmTester extends Thread {
+class ThAnalysisResult extends Thread {
+    ProcessAnalysis ac;
+    FileOutputStream fos;
+
+    String projDir() {
+        String dirPath = "";
+        try {
+            dirPath = ac.getFilesDir().getCanonicalPath();
+        } catch (IOException e) {
+        }
+        File dir2 = new File(dirPath);
+        if (!dir2.exists()) {
+            dir2.mkdirs();
+        }
+        dir2.setWritable(true, false);
+        return dir2.getParent();
+    }
+
+    public void run() {
+        try {
+            ac.cmdline();
+            for (; ; ) {
+
+                String line = ac.stdouterr();
+//                Log.d("sleepresult", "kkk" + line);
+                if (line.length() > 0) {
+                    Log.d("sleepresult", line);
+                }
+
+                try {
+                    sleep(50);
+                } catch (InterruptedException e) {
+                    Log.e("sleep result error", e.toString());
+                }
+            }
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+}
+
+
+class ThCalmTester extends Thread {
     ProcessAnalysis ac;
 
     public void run() {

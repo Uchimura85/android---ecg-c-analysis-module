@@ -21,7 +21,7 @@ add_library( # Sets the name of the library.
   src/main/cpp/3p_bmdx/src_code/bmdx_main.cpp
   src/main/cpp/ecgsqa_algos.cpp
   src/main/cpp/test_ex_ecg_sequential.cpp
-  src/main/cpp/test_ex_ecg_adddata.cpp
+
   #
   src/main/cpp/matrix/MyArr.cpp
 

@@ -51,7 +51,8 @@ namespace ecgsqa {
                     flags |= 1 << i;
                     inds[i] = float(a[j + 1]);
                     f[i] = ecgfvsmp(a[j + 2]);
-                } else {
+                }
+                else {
                     inds[i] = 0;
                     f[i] = 0;
                 }
@@ -268,10 +269,8 @@ namespace ecgsqa {
 
     bool ecg_data::load(const string &fnp, int sec) {
         string sdata;
-        // Load file from (fnp) to (sdata) All content
         if (file_io::load_bytes(fnp, sdata) <= 0) { return false; }
 
-        // init
         this->clear(sec);
         size_t pos = 0, pos2, pos3, pc1;
         const size_t end = string::npos;
@@ -290,7 +289,6 @@ namespace ecgsqa {
             pc1 = s.find('\t');
             if (pc1 == end) { pc1 = s.length(); }
 
-            //first line
             if (s.length() >= 2 && s[0] == '0' && s[1] == '_') // new data block
             {
                 cols.clear();
@@ -340,6 +338,7 @@ namespace ecgsqa {
             if (sec & db_Resp) { resp.resize(ismp + 1, 0); }
             if (sec & db_EEG) { eeg.resize(ismp + 1, 0); }
             if (sec & db_BP) { bp.resize(ismp + 1, 0); }
+
             for (int i = 0; i < ncols; ++i) {
                 ++pc1;
                 if (pc1 >= s.length()) { break; }
@@ -451,7 +450,8 @@ namespace ecgsqa {
             if (i == dflt) { return dflt; }
             if (gisrc_le(i) < gi0src) { i += 1; }
             return i + 1;
-        } else {
+        }
+        else {
             ecgismp i = gidest_ge(gi0src + 1, dflt);
             if (i == dflt) { return dflt; }
             if (gisrc_le(i) - 1 < gi0src) { i += 1; }
@@ -483,7 +483,6 @@ namespace ecgsqa {
         if (size_t(i4) >= re.length()) { return -2; }
 
         polynome3 p;
-        LOGE("before interpolate");
         p.interpolate(gi1 / fsrc, gi2 / fsrc, gi3 / fsrc, gi4 / fsrc, re[i1], re[i2], re[i3],
                       re[i4]);
         if (!p.b_valid) {
@@ -586,7 +585,8 @@ namespace ecgsqa {
             if (nslope == 0) {
                 slopecrit *= ecgfvsmp(15) / 16;
                 if (slopecrit < scmin) { slopecrit = scmin; }
-            } else if (nslope > 4) {
+            }
+            else if (nslope > 4) {
                 slopecrit *= ecgfvsmp(17) / 16;
                 if (slopecrit > scmax) { slopecrit = scmax; }
             }
@@ -596,7 +596,7 @@ namespace ecgsqa {
             nslope = 1;
             maxtime = ms160;
             sign = (filter > 0) ? 1 : -1;
-            qtime = time; // potential QRS Test time
+            qtime = time; // potential QRS start time
         }
         if (nslope != 0) {
             filter *= sign;
@@ -657,18 +657,7 @@ namespace ecgsqa {
             _sqrsretval pk = _d.sqrs_step(_gidest, f);
 
             // Save peak pos. and value.
-            LOGE1("rri    before bk %d", pk.b_R());
             if (pk.b_R()) {
-
-                ///////////////////////////
-//                if (g_beforeRPeak == -1) {
-//                    g_beforeRPeak = pk.gi;
-//                }
-//                double distance = (pk.gi - g_beforeRPeak) / r1.fdest;
-//                g_beforeRPeak = pk.gi;
-//                LOGE1("rri %f", distance);
-//                arr_RRI.push_back(distance);
-                ///////////////////////////
                 ecgismp isrc = r1.gisrc_le(pk.gi) - r1.gi0src;
                 pbeats->insert(isrc);
             }
@@ -698,9 +687,6 @@ namespace ecgsqa {
 
     alg_sqrs_nc::_sqrsretval alg_sqrs_nc::_sqrsdata::sqrs_step(ecgismp gi_, ecgfvsmp f_) {
         time = gi_;
-        int testVal = 2;
-        int testVal1 = 1;
-
         if (!b_f) {
             b_f = true;
             for (int i = 0; i < 9; ++i) { f[i] = f_; }
@@ -723,7 +709,8 @@ namespace ecgsqa {
             if (nslope == 0) {
                 slopecrit *= ecgfvsmp(15) / 16;
                 if (slopecrit < scmin) { slopecrit = scmin; }
-            } else if (nslope > 4) {
+            }
+            else if (nslope > 4) {
                 slopecrit *= ecgfvsmp(17) / 16;
                 if (slopecrit > scmax) { slopecrit = scmax; }
             }
@@ -735,7 +722,7 @@ namespace ecgsqa {
             b_nslope_a = true;
             maxtime = ms160;
             sign = (filter > 0) ? 1 : -1;
-            qtime = time; // potential QRS Test time
+            qtime = time; // potential QRS start time
         }
         if (nslope != 0) {
             filter *= sign;
@@ -939,7 +926,6 @@ namespace ecgsqa {
             // Get data sample from sequence.
             ecgfvsmp f; // the current sample value.
             int res = r1.v_interp(_gidest, &f);
-
 //if (res <= 0) { file_io::save_bytes("__trace.txt", st.str(), false); }
             if (res == -1) {
                 if (b_final) { _state = 2; }
@@ -953,13 +939,13 @@ namespace ecgsqa {
             b1 = true;
 
             // Feed noise detector.
-
+            _nc.feed(_gidest, f);
             ++_gidest;
 
             // Remember the current value for later passing into SQRS.
             _ncq.push(f);
 
-            // ProcessAnalysis the queued value if already available.
+            // Process the queued value if already available.
             if (_ncq.size() > size_t(_nc.ndest_ahead())) {
                 ecgismp gi_sqrs = _gidest - _nc.ndest_ahead() - 1;
                 f = _ncq.front();
@@ -976,7 +962,6 @@ namespace ecgsqa {
                     }else{}
 
                     double rriDistance = (pk.gi - g_beforeRPeak) / r1.fdest;
-                    LOGE("rrivalue %f", rriDistance);
                     g_beforeRPeak = pk.gi;
                     if(rriDistance > 0)
                         arr_RRI.push_back(rriDistance);
@@ -1021,13 +1006,15 @@ namespace ecgsqa {
                 else {
                     ie2 = ir1 + cnwpat_r();
                 }
-            } else { ie2 = ir1 + cnwpat_r(); }
+            }
+            else { ie2 = ir1 + cnwpat_r(); }
             if (size_t(ie2) > re.ecg.size()) { return 0; }
             ecgismp ie0;
             if (_gir_prev < 0) {
                 ie0 = ir1 - cirpat();
                 if (ie0 < 0) { ie0 = 0; }
-            } else {
+            }
+            else {
                 ie0 = _gir_prev - r1.gi0src;
                 if (ie0 < 0) { return -1; }
                 if (ir1 - ie0 <= 2 * cirpat()) { ie0 = ir1 - (ir1 - ie0) / 2; }
@@ -1176,7 +1163,8 @@ namespace ecgsqa {
                 i1 = 0;
                 i2 = _ir - n50;
                 nhalf = cirpat();
-            } else {
+            }
+            else {
                 i1 = _ir + n50;
                 i2 = nw;
                 nhalf = cnwpat_r();
@@ -1255,7 +1243,8 @@ namespace ecgsqa {
                         if (hr >= 1.4 * hrm && (Lw[0] == 1 || Lw[1] == 1 || Lw[0] + Lw[1] > 1.5)) {
                             hr = 0;
                             b_skip = true;
-                        } else if (_fLw & mask) {
+                        }
+                        else if (_fLw & mask) {
                             hr = 0.5 * (hr + hrm);
                         } // if noise might have been influenced, smooth the estimate
                         if (hr) { _avg_hr.push(hr); }
@@ -1426,7 +1415,8 @@ namespace ecgsqa {
                     if (xbend1 < 0) {
                         i0 = xi1 + 1;
                         i9 = xpk1 - 1;
-                    } else {
+                    }
+                    else {
                         i0 = xbend1 + 1;
                         i9 = xpk1 - 1;
                         if (i9 - i0 > n35) { i0 += (i9 - i0) / 2; }
@@ -1713,7 +1703,8 @@ namespace ecgsqa {
                 _pat[i].push(-0.1);
                 _pat[i].push(0);
                 _pat[i].push(0.1);
-            } else if (j < -n1 || j >= n1) {
+            }
+            else if (j < -n1 || j >= n1) {
                 _pat[i].push(-0.1);
                 _pat[i].push(0.1);
             }
@@ -2228,7 +2219,7 @@ namespace ecgsqa {
                 //    so run() should have exited.
                 //    But if data is noisy, CIG might have been cancelled at 0.25*nbeatscig
                 //    on prev. call. to run(), so several beats may be already available,
-                //    and no-exiting makes an attempt to initForCallback further.
+                //    and no-exiting makes an attempt to process further.
                 if (b_streaming && gib_stat2.empty()) { return 0; }
             }
 
@@ -2319,7 +2310,7 @@ namespace ecgsqa {
                     gib_cig.clear();
                     gib_stat2.clear();
                     stp._gicignew = gi +
-                                    1; // next attempt to define CIG window will Test right after the current point
+                                    1; // next attempt to define CIG window will start right after the current point
                 }
 
                 ++ind_b;

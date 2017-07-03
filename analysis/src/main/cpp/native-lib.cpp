@@ -9,8 +9,6 @@
 #pragma clang diagnostic ignored "-Wmissing-noreturn"
 using namespace std;
 
-void initForCallback(JNIEnv *env, jobject thiz);
-
 int test_ex_ecg_sequential(int argc, char **argv);
 
 int wfdb_export(int argc, char **argv);
@@ -130,8 +128,9 @@ Java_com_tool_sports_com_analysis_ProcessAnalysis_stdouterr(
 string dp, filename;
 int const FILETYPE_ECG = 0;
 int const FILETYPE_RRI = 1;
-int const FILETYPE_CALM = 2;
-int const FILETYPE_IRRI = 3;
+int const FILETYPE_CALM1 = 2;
+int const FILETYPE_CALM2 = 3;
+int const FILETYPE_IRRI = 4;
 
 
 template<class arrayType>
@@ -149,9 +148,13 @@ void saveCSV(arrayType _arrEcg, string _str_dp, string _str_filename, int type =
         case FILETYPE_RRI:
             filename += " rri.csv";
             break;
-        case FILETYPE_CALM:
-            filename += " calm.csv";
+        case FILETYPE_CALM1:
+            filename += " calm_1.csv";
             break;
+        case FILETYPE_CALM2:
+            filename += " calm_2.csv";
+            break;
+
         case FILETYPE_IRRI:
             filename += " irri.csv";
             break;
@@ -181,7 +184,7 @@ Java_com_tool_sports_com_analysis_ProcessAnalysis_analysisFile(
         JNIEnv *env,
         jobject, /* this */
         jstring _datapath, jstring _filename) {
-    LOGE("testtest analysisFile function");
+    LOGE("analysisFile function");
 
     cout << "Analysis Start: " << unity(d_now()).vcstr() << "\r\n";
     std::string dp = wsToBs(j_wstring(env, _datapath));
@@ -198,9 +201,10 @@ Java_com_tool_sports_com_analysis_ProcessAnalysis_analysisFile(
 
     try {
         char *chPtr_FilePath = (char *) env->GetStringUTFChars(_filename,
-                                                               0);// jstring To std::string
+                                                               0); // jstring To std::string
         char *argv[3] = {(char *) "_", chPtr_FilePath, (char *) "30"};
 
+        LOGE("testtest res1 = %d", res1);
         res1 = test_ex_ecg_sequential(3, argv);
         cout << "RETVAL: " << res1 << endl;
         LOGE("testtest res1 = %d", res1);
@@ -253,7 +257,6 @@ MyReturnValue VLFLFHF(MyArray data) {
     //MyArray spec = pow2(fft(data));
     MyArray spec = fft(data); // calculate abs(fft(data)) ^ 2 in fft() function
 
-    LOGD("VLFLFHF length of data %d %d", length(n), length(data));
     MyExArray PS = frame(freq, spec);
 
     // summarize spectrum power
@@ -261,23 +264,10 @@ MyReturnValue VLFLFHF(MyArray data) {
 
     FLOAT lf_sum = sum(condition2(PS)) / (FLOAT) length(condition2(PS));
     FLOAT hf_sum = sum(condition3(PS)) / (FLOAT) length(condition3(PS));
-    LOGD("vvvvvv vlf_sum %f", vlf_sum);
-    LOGD("vvvvvv lf_sum %f", lf_sum);
-    LOGD("vvvvvv hf_sum %f", hf_sum);
 
-//    MyArray testT = condition1(PS);
-//        show(testT);
-    // summarize spectrum difference
     MyExArray vlf = subsetC1(PS);
     MyExArray lf = subsetC2(PS);
     MyExArray hf = subsetC3(PS);
-    LOGD("VLFLFHF step3 %d %d %d", length(vlf), length(lf), length(hf));
-//    show(vlf.spec, "VLFLFHF step3 vlf");
-//    LOGE1("");
-//    show(lf.spec, "VLFLFHF step3 lf");
-//    LOGE1("");
-//    show(hf.spec, "VLFLFHF step3 hf");
-//    LOGE1("");
 
     FLOAT vlf_dif = 0;
     for (unsigned int x = 0; x < (nrow(vlf) - 1); x++) {
@@ -439,7 +429,7 @@ Java_com_tool_sports_com_analysis_ProcessAnalysis_AddEcgData(JNIEnv *env, jobjec
 
         int nums = a1.arr_RRI.size();
         saveCSV(a1.arr_RRI, dp, filename, FILETYPE_RRI); //rri
-        LOGEsave("rrisize steven from %d to  %d", size, nums);
+        LOGEsave("calmness_ rrisize steven from %d to  %d", size, nums);
         show(a1.arr_RRI, "arr_rri_array");
         calmnessDataSrc(a1.arr_RRI);
         outHeartRate(a1.arr_RRI);
@@ -499,7 +489,6 @@ Java_com_tool_sports_com_analysis_ProcessAnalysis_AddRRIData(JNIEnv *env, jobjec
     calmnessDataSrc(myarrayRRI);
 
 }
-bool isFFirst = true;
 
 void calmnessDataSrc(MyArray RRI) {
 
@@ -515,20 +504,15 @@ void calmnessDataSrc(MyArray RRI) {
             IRRI = concat(IRRI, X);
         }
     }
-//    if (isFFirst) {
-    isFFirst = false;
-    for (unsigned int i = 0; i < 50; i++) {
-        LOGD("testestt  %f", IRRI.at(i));
-    }
-    //}
+
     calmnessAlgo(IRRI);
 }
 
-MyArray preIRRI;
+MyArray g_queueIRRI;
 extern "C"
 JNIEXPORT void JNICALL
 Java_com_tool_sports_com_analysis_ProcessAnalysis_initCalmnessInC(JNIEnv *, jobject) {
-    preIRRI.clear();
+    g_queueIRRI.clear();
 }
 
 void calmnessAlgo(MyArray IRRI) {
@@ -542,11 +526,12 @@ void calmnessAlgo(MyArray IRRI) {
     MyArray ar_lf_dif;
     MyArray ar_hf_dif;
 
-    preIRRI = concat(preIRRI, IRRI); // push to Global queue
-    int count = length(preIRRI) - window_size;
+    g_queueIRRI = concat(g_queueIRRI, IRRI); // push to Global queue
+    int count = length(g_queueIRRI) - window_size;
     int nTimes = count / interval;
 
-    LOGE1("calmness_algo: count = %d, preIRRI = %d nTimes= %d", count, length(preIRRI), nTimes);
+    LOGE1("calmness_algo: count = %d, g_queueIRRI = %d nTimes= %d", count, length(g_queueIRRI),
+          nTimes);
 
     if (count <= 0 || nTimes <= 0) {
         LOGE1("calmness_algo: count of nTimes < 0");
@@ -554,11 +539,9 @@ void calmnessAlgo(MyArray IRRI) {
     }
 
     for (int i = 0; i < nTimes * interval; i += interval) {
-//        LOGE1(" %d   count of for (ceil) %d,    IRRI size = %d remain = %d rLength = %d, nTimes= %d, ",
-//              i, count, length(IRRI), remain, length(preIRRI), nTimes);
         MyArray arrSeq = seq(i, i + window_size - 1);
 
-        MyArray arrByIndex = getByIndexArr(preIRRI, arrSeq);
+        MyArray arrByIndex = getByIndexArr(g_queueIRRI, arrSeq);
         MyReturnValue _VLFLFHF = VLFLFHF(arrByIndex);
 
         ar_vlf_sum = concat(ar_vlf_sum, _VLFLFHF.vlf_sum);
@@ -569,9 +552,9 @@ void calmnessAlgo(MyArray IRRI) {
         ar_lf_dif = concat(ar_lf_dif, _VLFLFHF.lf_dif);
         ar_hf_dif = concat(ar_hf_dif, _VLFLFHF.hf_dif);
     }
-    LOGE1("calmness_algo: remove From First %d %d, %d", length(preIRRI), nTimes * interval,
-          length(preIRRI) - nTimes * interval);
-    preIRRI = subArray(preIRRI, nTimes * interval);
+    LOGE1("calmness_algo: remove From First %d %d, %d", length(g_queueIRRI), nTimes * interval,
+          length(g_queueIRRI) - nTimes * interval);
+    g_queueIRRI = subArray(g_queueIRRI, nTimes * interval);
 
     My6Array df_VLFLFHF;
     df_VLFLFHF.ar_vlf_sum = ar_vlf_sum;
@@ -586,7 +569,7 @@ void calmnessAlgo(MyArray IRRI) {
     FLOAT b = 50;
     int len = length(df_VLFLFHF);
     MyArray calmness, calmness2;
-    LOGE1("lengthlength %d", len);
+
     for (unsigned int i = 0; i < len; i++) {
         FLOAT PR = (
                            max(df_VLFLFHF.ar_lf_sum.at(i), df_VLFLFHF.ar_hf_sum.at(i))
@@ -617,15 +600,15 @@ void calmnessAlgo(MyArray IRRI) {
 
         }
     }
-    show(calmness2);
-
+    saveCSV(calmness, dp, filename, FILETYPE_CALM1);
+    saveCSV(calmness2, dp, filename, FILETYPE_CALM2);
     calmnessOut(calmness2);
 }
 
 void calmnessOut(MyArray _calmness) {
     int len = _calmness.size();
     LOGE1("---------------------- out -------------------  %d", len);
-    saveCSV(_calmness, dp, filename, FILETYPE_CALM);
+
     for (unsigned int i = 0; i < len; i++) {
         gCalmOut.push_back(_calmness.front());
         _calmness.pop_front();
