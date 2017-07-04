@@ -22,8 +22,8 @@ public class MainActivity extends AppCompatActivity {
         ProcessAnalysis a = new ProcessAnalysis();
         a.startCSVExport();
         Static1.isCalmDebug = true;
-//        a.startCalm();
-        a.startSleepAnalysis();
+        a.startCalm();
+//      a.startSleepAnalysis();
     }
     private boolean _checkPermission() {
 

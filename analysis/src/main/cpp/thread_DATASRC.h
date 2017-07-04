@@ -25,11 +25,11 @@ struct thread_DATASRC : threadctl::ctx_base {
 //        m = 7500;
         int ecgLen = d.ecg.size();
 //        m = ecgLen / 100;
-        LOGD("sept amount speed(r) = %f, %f", r, m);
+        LOGD("sept amount speed(r) = %f, %zd", r, m);
         int j = 1;
         for (size_t i = 0; i < ecgLen; i += m, j++) {
-            LOGD("sept amount speed(r) = %d, %d", r, m);
-            LOGD("data input %d       %d", i, j);
+//            LOGD("sept amount speed(r) = %d, %d", r, m);
+//            LOGD("data input %d       %d", i, j);
             if (b_stop()) { break; }
             if (1) {
                 t_lock_QFEED __lock;
@@ -38,7 +38,7 @@ struct thread_DATASRC : threadctl::ctx_base {
                     QFEED.push_back(feed_value(d.ecg[i + j], 0));
                 } // send data sample
             }
-            sleep_mcs(1000000); // 10000 = 10ms,1000,000 = 1s
+            sleep_mcs(10000); // 10000 = 10ms,1000,000 = 1s
         }
         LOGD("DATASRC Exiting ");
         cout << "DATASRC Exiting." << endl;

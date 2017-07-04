@@ -403,7 +403,8 @@ void outHeartRate(MyArray arr_RRI) {
         gHROut.push_back(hr);
     }
 }
-
+ecg_data g_ecgQueue(250);
+alg_sqrs_nc a1(g_ecgQueue.fd, g_ecgQueue.ecg, g_ecgQueue.beats);
 extern "C"
 JNIEXPORT void JNICALL
 Java_com_tool_sports_com_analysis_ProcessAnalysis_AddEcgData(JNIEnv *env, jobject,
@@ -419,14 +420,16 @@ Java_com_tool_sports_com_analysis_ProcessAnalysis_AddEcgData(JNIEnv *env, jobjec
 
     env->GetDoubleArrayRegion(fArray, 0, size, &vecEcg[0]);
     saveCSV(vecEcg, dp, filename, FILETYPE_ECG); //ecg
-    ecg_data d(250);
+
     try {
         for (unsigned int i = 0; i < size; i++) {
-            d.ecg.push_back(vecEcg.at(i));
+            g_ecgQueue.ecg.push_back(vecEcg.at(i));
         }
-        alg_sqrs_nc a1(d.fd, d.ecg, d.beats);
+
         int res = a1.run(false);
 
+        ecgismp gi = a1.min_gisrc();
+        g_ecgQueue.trim(gi - a1.gi0src());
         int nums = a1.arr_RRI.size();
         saveCSV(a1.arr_RRI, dp, filename, FILETYPE_RRI); //rri
         LOGEsave("calmness_ rrisize steven from %d to  %d", size, nums);
