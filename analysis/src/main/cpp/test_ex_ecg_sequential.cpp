@@ -27,6 +27,7 @@ int test_ex_ecg_sequential(int argc, char** argv)
         ));
 
         CLIENT.start_auto<thread_CLIENT, unity>(paramline().list_m(
+                "DB filename", argv[1],
                 "QOUT", q2
         ));
 

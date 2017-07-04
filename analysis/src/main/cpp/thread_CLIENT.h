@@ -8,6 +8,11 @@ struct thread_CLIENT : threadctl::ctx_base {
         unity &args = *pdata<unity>();
         t_QOUT &QOUT = args["QOUT"].ref<t_QOUT>();
 
+        string strSaveFileName = +args / "DB filename" / "";
+        int pointPos = strSaveFileName.find(".");
+        strSaveFileName = strSaveFileName.substr(0, pointPos);
+        strSaveFileName = strSaveFileName + "_result.csv";
+
         cout << "Now; beat time (s); HR; P-, T-side noise; slp.st. time (s); slp.st." << endl;
         while (true) {
             if (b_stop()) { break; }
@@ -34,13 +39,25 @@ struct thread_CLIENT : threadctl::ctx_base {
                     << "\t" << beat.slpst
                     << endl;
             gTimes++;
-            LOGE("sleepresult: %d,  %s, %s, %s, %s, %s,%s, %s", gTimes,
+            LOGE("sleepresult: %d,  %s, %s, %s, %s, %s,%s, sleepStage: %s", gTimes,
                  unity(d_now()).vcstr().c_str(),
                  ftocs(beat.time_beat, 6, 2).c_str(),
                  (beat.hr ? ftocs(beat.hr, 4, 1) : "N/A").c_str(), ftocs(beat.Lp, 4).c_str(),
                  ftocs(beat.Lt, 4).c_str(),
                  (beat.time_slpst >= 0 ? ftocs(beat.time_slpst, 6, 2) : "").c_str(),
                  beat.slpst.c_str());
+//            string strForFile = "" + ftocs(gTimes) + ": " + beat.slpst.c_str() + "\n\r";
+            char cpLine[1000];
+            sprintf(cpLine, "sleepresult: %d,  %s, %s, %s, %s, %s,%s, sleepStage: %s \n", gTimes,
+                    unity(d_now()).vcstr().c_str(),
+                    ftocs(beat.time_beat, 6, 2).c_str(),
+                    (beat.hr ? ftocs(beat.hr, 4, 1) : "N/A").c_str(), ftocs(beat.Lp, 4).c_str(),
+                    ftocs(beat.Lt, 4).c_str(),
+                    (beat.time_slpst >= 0 ? ftocs(beat.time_slpst, 6, 2) : "").c_str(),
+                    beat.slpst.c_str());
+            int fres = file_io::save_bytes(strSaveFileName.c_str(), cpLine, true);
+            LOGD("savecsvsleep: file: %s, content length: %d, filesave: %d",
+                 strSaveFileName.c_str(), strlen(cpLine), fres);
         }
     }
 };

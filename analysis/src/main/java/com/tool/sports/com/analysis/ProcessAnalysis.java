@@ -37,8 +37,8 @@ public class ProcessAnalysis extends AppCompatActivity {
         Log.d(TAG, "onCreate");
     }
 
-    public void startSleepAnalysis() {
-        ThAnalysis threadSleepAnalysis = new ThAnalysis();
+    public void startSleepAnalysis(String _fileName) {
+        ThAnalysis threadSleepAnalysis = new ThAnalysis(_fileName);
         threadSleepAnalysis.ac = this;
         threadSleepAnalysis.start();
 
@@ -321,10 +321,13 @@ class ThCalmResult extends Thread {
 
 class ThAnalysis extends Thread {
     ProcessAnalysis ac;
-
+    String mFileName;
+    ThAnalysis(String fileName){
+        mFileName = fileName;
+    }
     public void run() {
         String strDownload = Environment.getExternalStorageDirectory().getPath();
-        ac.analysisFile("/sdcard/Download/files", "t_slp01a.txt");
+        ac.analysisFile("/sdcard/Download/sleepdata", mFileName);//"t_slp01a.txt"
     }
 }
 

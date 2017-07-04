@@ -72,4 +72,55 @@ struct t_lock_MyArray : critsec_t<MyArray> {
     t_lock_MyArray() : critsec_t<MyArray>(100, -1) {}
 };
 
+
+int const FILETYPE_ECG = 0;
+int const FILETYPE_RRI = 1;
+int const FILETYPE_CALM1 = 2;
+int const FILETYPE_CALM2 = 3;
+int const FILETYPE_IRRI = 4;
+
+
+template<class arrayType>
+void saveCSV(arrayType _arrEcg, string _str_dp, string _str_filename, int type = 0) {
+    string filename = _str_filename;
+    LOGD("savecsv: dir: %s, filename: %s, nameLen: %d", _str_dp.c_str(), filename.c_str(),
+         filename.length());
+    if (filename.length() == 0) {
+        return;
+    }
+    switch (type) {
+        case FILETYPE_ECG:
+            filename += " ecg.csv";
+            break;
+        case FILETYPE_RRI:
+            filename += " rri.csv";
+            break;
+        case FILETYPE_CALM1:
+            filename += " calm_1.csv";
+            break;
+        case FILETYPE_CALM2:
+            filename += " calm_2.csv";
+            break;
+
+        case FILETYPE_IRRI:
+            filename += " irri.csv";
+            break;
+
+        default:
+            break;
+    }
+    // BEGIN file write
+    chdir(_str_dp.c_str());
+    int len = _arrEcg.size();
+    string strForFile = "length = " + itocs(len, 12) + "\r\n";
+    strForFile = "";// ignore Length;
+    for (unsigned int i = 0; i < len; i++) {
+        strForFile += ftocs(_arrEcg.at(i), 6, 8);
+        strForFile += "\r\n";
+    }
+    int fres = file_io::save_bytes(filename.c_str(), strForFile, true);
+    LOGD("savecsv: file: %s, content length: %d, filesave: %d", filename.c_str(),
+         strForFile.length(), fres);
+    // END file write
+}
 #endif
