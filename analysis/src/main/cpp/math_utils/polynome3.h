@@ -27,7 +27,6 @@ struct polynome3
 
   polynome3& interpolate(double x1, double x2, double x3, double x4, double y1, double y2, double y3, double y4, double eps = 1.e-20) throw()
   {
-    LOGD1("interpol ");
     if (eps < 1.e-300) { eps = 1.e-300; }
     b_valid = false;
     while (true) // once
@@ -53,7 +52,6 @@ struct polynome3
       b_valid = true;
       return *this;
     }
-      LOGD1("interpol 2 ");
     a = 0.; b = 0.; c = 0.; d = 0.;
     return *this;
   }

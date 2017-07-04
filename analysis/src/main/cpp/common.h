@@ -74,6 +74,7 @@ struct t_lock_MyArray : critsec_t<MyArray> {
 
 
 int const FILETYPE_ECG = 0;
+int const FILETYPE_ECG_SLEEP = 5;
 int const FILETYPE_RRI = 1;
 int const FILETYPE_CALM1 = 2;
 int const FILETYPE_CALM2 = 3;
@@ -89,6 +90,9 @@ void saveCSV(arrayType _arrEcg, string _str_dp, string _str_filename, int type =
         return;
     }
     switch (type) {
+        case FILETYPE_ECG_SLEEP:
+            filename += " ecg_sleep.csv";
+            break;
         case FILETYPE_ECG:
             filename += " ecg.csv";
             break;
@@ -109,6 +113,7 @@ void saveCSV(arrayType _arrEcg, string _str_dp, string _str_filename, int type =
         default:
             break;
     }
+
     // BEGIN file write
     chdir(_str_dp.c_str());
     int len = _arrEcg.size();
@@ -121,6 +126,30 @@ void saveCSV(arrayType _arrEcg, string _str_dp, string _str_filename, int type =
     int fres = file_io::save_bytes(filename.c_str(), strForFile, true);
     LOGD("savecsv: file: %s, content length: %d, filesave: %d", filename.c_str(),
          strForFile.length(), fres);
-    // END file write
 }
+//
+//template<class arrayType>
+//void saveSleepEcgCSV(arrayType _arrEcg, string _str_dp, string _str_filename) {
+//    string filename = _str_filename;
+//    LOGD("savecsvsleep: dir: %s, filename: %s, nameLen: %d", _str_dp.c_str(), filename.c_str(),
+//         filename.length());
+//    if (filename.length() == 0) {
+//        return;
+//    }
+//    filename += " ecg_sleep.csv";
+//
+//    // BEGIN file write
+//    chdir(_str_dp.c_str());
+//    int len = _arrEcg.size();
+//    string strForFile = "length = " + itocs(len, 12) + "\r\n";
+//    strForFile = "0_1\t" + ftocs(_arrEcg.at(0)) + "\tfd=250.; columns=|ECG;\r\n";// ignore Length;
+//    for (unsigned int i = 0; i < len; i++) {
+//        strForFile += "\t" + ftocs(_arrEcg.at(i), 6, 8);
+//        strForFile += "\r\n";
+//    }
+//    int fres = file_io::save_bytes(filename.c_str(), strForFile, true);
+//    LOGD("savecsvsleep: file: %s, content length: %d, filesave: %d", filename.c_str(),
+//         strForFile.length(), fres);
+//}
+
 #endif

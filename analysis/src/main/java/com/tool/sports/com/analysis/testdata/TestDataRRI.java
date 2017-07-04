@@ -1,4 +1,4 @@
-package com.tool.sports.com.analysis;
+package com.tool.sports.com.analysis.testdata;
 
 /**
  * Created by admin on 2017/6/4.

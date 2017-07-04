@@ -368,7 +368,7 @@ Java_com_tool_sports_com_analysis_ProcessAnalysis_AddEcgData(JNIEnv *env, jobjec
 
     env->GetDoubleArrayRegion(fArray, 0, size, &vecEcg[0]);
     saveCSV(vecEcg, dp, filename, FILETYPE_ECG); //ecg
-
+//    saveSleepEcgCSV(vecEcg, dp, filename); // sleep ecg data
     try {
         for (unsigned int i = 0; i < size; i++) {
             g_ecgQueue.ecg.push_back(vecEcg.at(i));
@@ -548,7 +548,7 @@ void calmnessAlgo(MyArray IRRI) {
             if (_calm2 < 0)_calm2 = 0;
             calmness2.push_back(_calm2);
             LOGI("calmness_2                                                                  calm2 = %f",
-                  _calm2);
+                 _calm2);
 
         }
     }

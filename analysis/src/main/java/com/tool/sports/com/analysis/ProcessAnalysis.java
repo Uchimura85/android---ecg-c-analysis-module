@@ -7,6 +7,7 @@ import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 
 import com.tool.sports.com.analysis.ECGLib.PipeLine;
+import com.tool.sports.com.analysis.testdata.TestDataECG;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -28,6 +29,7 @@ public class ProcessAnalysis extends AppCompatActivity {
         mFileName = getFilenameFromTime();
         pipeline = new PipeLine();
         pipeline.init(250, 5);
+
     }
 
     @Override
@@ -46,6 +48,7 @@ public class ProcessAnalysis extends AppCompatActivity {
         threadSleepResult.ac = this;
         threadSleepResult.start();
     }
+
 
     public void startCalm() {
         Log.d(TAG, "Calm");
@@ -125,7 +128,7 @@ public class ProcessAnalysis extends AppCompatActivity {
 
     Handler handler = new Handler();
 
-    private double ecgTransform(int ecgVal) {
+    public static double ecgTransform(int ecgVal) {
         return (double) ((ecgVal - 1200) / 800f);
     }
 
@@ -322,12 +325,16 @@ class ThCalmResult extends Thread {
 class ThAnalysis extends Thread {
     ProcessAnalysis ac;
     String mFileName;
-    ThAnalysis(String fileName){
+
+    ThAnalysis(String fileName) {
         mFileName = fileName;
     }
+
     public void run() {
         String strDownload = Environment.getExternalStorageDirectory().getPath();
         ac.analysisFile("/sdcard/Download/sleepdata", mFileName);//"t_slp01a.txt"
+
+
     }
 }
 
@@ -385,8 +392,7 @@ class ThCalmTester extends Thread {
             }
         }
         Log.d("calmness source length", newData.length + "");
-        for (int i = 0; i < 13; i++)
-        {
+        for (int i = 0; i < 1; i++) {
             ac.addEcgDataDouble(newData);
             try {
                 sleep(2000);
