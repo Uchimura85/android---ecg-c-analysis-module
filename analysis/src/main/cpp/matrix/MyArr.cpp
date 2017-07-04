@@ -104,7 +104,6 @@ MyArray concat(MyArray a1, FLOAT f) {
 
 MyArray arrayMul(MyArray a1, double v) {
     MyArray data;
-    LOGD("mul %lf", v);
     int len = a1.size();
     for (unsigned int i = 0; i < len; i++) {
         data.push_back(a1.at(i) * v);

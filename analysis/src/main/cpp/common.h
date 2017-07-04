@@ -16,16 +16,12 @@ using namespace ecgsqa;
 
 #include <android/log.h>
 
-#define  LOG_TAG    "someTag"
-#define  LOGE_TAG    "ErrorTag"
-#define  LOGE_TAG1    "ErrorNew"
-#define  LOGE_TAGsave    "c_datapoint"
+#define  LOG_TAG    "C_TAG"
 
-
-#define  LOGE(...)  __android_log_print(ANDROID_LOG_ERROR,LOGE_TAG,__VA_ARGS__)
+#define  LOGE(...)  __android_log_print(ANDROID_LOG_ERROR,LOG_TAG,__VA_ARGS__)
 #define  LOGW(...)  __android_log_print(ANDROID_LOG_WARN,LOG_TAG,__VA_ARGS__)
-#define  LOGE1(...)  __android_log_print(ANDROID_LOG_DEBUG,LOGE_TAG1,__VA_ARGS__)
-#define  LOGEsave(...)  __android_log_print(ANDROID_LOG_ERROR,LOGE_TAGsave,__VA_ARGS__)
+#define  LOGE1(...)  __android_log_print(ANDROID_LOG_DEBUG,LOG_TAG,__VA_ARGS__)
+#define  LOGEsave(...)  __android_log_print(ANDROID_LOG_ERROR,LOG_TAG,__VA_ARGS__)
 
 #define  LOGD(...)  __android_log_print(ANDROID_LOG_DEBUG,LOG_TAG,__VA_ARGS__)
 #define  LOGI(...)  __android_log_print(ANDROID_LOG_INFO,LOG_TAG,__VA_ARGS__)

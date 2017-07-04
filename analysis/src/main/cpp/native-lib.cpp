@@ -172,11 +172,10 @@ void saveCSV(arrayType _arrEcg, string _str_dp, string _str_filename, int type =
         strForFile += "\r\n";
     }
     int fres = file_io::save_bytes(filename.c_str(), strForFile, true);
-    LOGD("savecsvresult: file: %s, content length: %d, on_calm_result: %d", filename.c_str(),
+    LOGD("savecsv: file: %s, content length: %d, filesave: %d", filename.c_str(),
          strForFile.length(), fres);
     // END file write
 }
-
 
 extern "C"
 JNIEXPORT void JNICALL
@@ -204,10 +203,8 @@ Java_com_tool_sports_com_analysis_ProcessAnalysis_analysisFile(
                                                                0); // jstring To std::string
         char *argv[3] = {(char *) "_", chPtr_FilePath, (char *) "30"};
 
-        LOGE("testtest res1 = %d", res1);
         res1 = test_ex_ecg_sequential(3, argv);
         cout << "RETVAL: " << res1 << endl;
-        LOGE("testtest res1 = %d", res1);
     } catch (...) {}
 }
 
@@ -289,8 +286,6 @@ MyReturnValue VLFLFHF(MyArray data) {
     hf_dif = hf_dif / (FLOAT) length(condition3(PS));
 
     MyReturnValue rtn;
-    LOGD("-----------vlfdiffffff  %f, %f, %f, %f, %f, %f", vlf_sum, lf_sum, hf_sum, vlf_dif, lf_dif,
-         hf_dif);
     rtn.vlf_sum = vlf_sum;
     rtn.lf_sum = lf_sum;
     rtn.hf_sum = hf_sum;
@@ -399,17 +394,20 @@ void outHeartRate(MyArray arr_RRI) {
         FLOAT rri = arr_RRI.at(i);
         rri = rri > 0 ? rri : 1;
         FLOAT hr = 60 / rri;
-        LOGE("heartrate %f", hr);
+//        LOGE("heartrate %f", hr);
         gHROut.push_back(hr);
     }
 }
+
 ecg_data g_ecgQueue(250);
 alg_sqrs_nc a1(g_ecgQueue.fd, g_ecgQueue.ecg, g_ecgQueue.beats);
+
 extern "C"
 JNIEXPORT void JNICALL
 Java_com_tool_sports_com_analysis_ProcessAnalysis_AddEcgData(JNIEnv *env, jobject,
                                                              jdoubleArray fArray, jstring _jstrPath,
                                                              jstring _jstrfilename) {
+
     cout << "add ecg data: " << unity(d_now()).vcstr() << "\r\n";
 
     dp = wsToBs(j_wstring(env, _jstrPath));
@@ -425,15 +423,17 @@ Java_com_tool_sports_com_analysis_ProcessAnalysis_AddEcgData(JNIEnv *env, jobjec
         for (unsigned int i = 0; i < size; i++) {
             g_ecgQueue.ecg.push_back(vecEcg.at(i));
         }
-
+//        LOGE("calmness_ ecg -> rri before Run  g_ecgQueue size = %d", g_ecgQueue.ecg.size());
         int res = a1.run(false);
 
         ecgismp gi = a1.min_gisrc();
+//        LOGD("calmness_ ecg -> rri after  Run  g_ecgQueue size = %d, gi=%d", g_ecgQueue.ecg.size(), gi);
         g_ecgQueue.trim(gi - a1.gi0src());
+//        LOGD("calmness_ ecg -> rri after  trim g_ecgQueue size = %d, gi - a1.gi0src() = %ld", g_ecgQueue.ecg.size(), gi - a1.gi0src());
         int nums = a1.arr_RRI.size();
         saveCSV(a1.arr_RRI, dp, filename, FILETYPE_RRI); //rri
-        LOGEsave("calmness_ rrisize steven from %d to  %d", size, nums);
-        show(a1.arr_RRI, "arr_rri_array");
+//        LOGD("calmness_ ecg -> rri size steven from %d to  %d", size, nums);
+//        show(a1.arr_RRI, "arr_rri_array");
         calmnessDataSrc(a1.arr_RRI);
         outHeartRate(a1.arr_RRI);
     }
@@ -593,12 +593,12 @@ void calmnessAlgo(MyArray IRRI) {
             (void) __lock;
 
             calmness.push_back(_calm);
-            LOGE1("calmness_1  %d   PR= %f DR= %f calm  = %f", i, PR, DR, _calm);
+            LOGI("calmness_1  %d   PR= %f DR= %f calm  = %f", i, PR, DR, _calm);
             FLOAT _calm2 = (_calm - 80) / (94 - 80) * 100;
             if (_calm2 > 100)_calm2 = 100;
             if (_calm2 < 0)_calm2 = 0;
             calmness2.push_back(_calm2);
-            LOGE1("calmness_2                                                                  calm2 = %f",
+            LOGI("calmness_2                                                                  calm2 = %f",
                   _calm2);
 
         }

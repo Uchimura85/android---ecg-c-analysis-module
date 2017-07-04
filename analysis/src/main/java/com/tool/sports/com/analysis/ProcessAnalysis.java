@@ -176,10 +176,10 @@ public class ProcessAnalysis extends AppCompatActivity {
         if (pipeline.isDected()) {
             String str = "" + pipeline.getHeartRate();
 
-            Log.d("Heartrate", str);
+//            Log.d("Heartrate", str);
 //			bpmView.setText(str);
             int peakPos = peakStart;
-            Log.d("peakpos", "" + peakPos);
+//            Log.d("peakpos", "" + peakPos);
 
             Boolean bAF = false;
             if (pipeline.typeClassification.processwaveChars.type == 86 || pipeline.typeClassification.processwaveChars.type == 83 || pipeline.typeClassification.processwaveChars.type == 65)
@@ -193,13 +193,11 @@ public class ProcessAnalysis extends AppCompatActivity {
                 if (prevbAF) {
                     String AFStart = "" + timeOfPrevAF;
                     String AFEnd = "" + peakStart;
-                    Log.d("afresult", AFStart + ":" + AFEnd);
+//                    Log.d("afresult", AFStart + ":" + AFEnd);
                 }
             }
             prevbAF = bAF;
-
-            Log.d("af result", "" + peakPos);
-
+//            Log.d("af result", "" + peakPos);
 
             String strAFandNormal;
             if (pipeline.typeClassification.processwaveChars.type == 86 || pipeline.typeClassification.processwaveChars.type == 83 || pipeline.typeClassification.processwaveChars.type == 65) {
@@ -210,9 +208,7 @@ public class ProcessAnalysis extends AppCompatActivity {
                 strAF_NORMAL_UNKNOWN = IS_NORMAL;
             }
 
-            Log.d("Heartrate", "out algo: " + strAFandNormal);
-
-
+//            Log.d("Heartrate", "out algo: " + strAFandNormal);
             peakStart = sampleCounter;
         }
         sampleCounter++;
@@ -379,16 +375,23 @@ class ThCalmTester extends Thread {
 
     public void run() {
 
-        double[] newData = new double[TestDataRRI2.data.length * 1];
-        for (int i = 0; i < TestDataRRI2.data.length; i++) {
+        double[] newData = new double[TestDataECG.data.length * 1];
+        for (int i = 0; i < TestDataECG.data.length; i++) {
             for (int j = 0; j < 1; j++) {
-//                newData[TestDataRRI.data.length * j + i] = (TestDataRRI.data[i] - 1200) / 800f;
-                newData[TestDataRRI2.data.length * j + i] = TestDataRRI2.data[i];
+                newData[TestDataECG.data.length * j + i] = TestDataECG.data[i];
             }
         }
-        Log.d("steve testtesttest", newData.length + "");
-//        for (int i = 0; i < 3; i++)
-//            ac.addEcgDataDouble(newData);
-        ac.AddRRIData(newData);
+        Log.d("calmness source length", newData.length + "");
+        for (int i = 0; i < 13; i++)
+        {
+            ac.addEcgDataDouble(newData);
+            try {
+                sleep(2000);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
+//        ac.AddRRIData(newData);
+
     }
 }
