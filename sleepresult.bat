@@ -1,1 +1,1 @@
-adb pull "/sdcard/Download/sleepdata"
+adb pull "/sdcard/ReportSleep"

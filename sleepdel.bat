@@ -1,1 +1,1 @@
-adb shell rm -r sdcard/Download/sleepdata/t_slp01a.txt_result
+adb shell rm -r sdcard/Download/sleepdata/t_slp01a_result.csv

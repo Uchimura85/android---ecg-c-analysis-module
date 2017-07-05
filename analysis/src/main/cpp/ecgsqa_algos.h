@@ -167,8 +167,6 @@ namespace ecgsqa {
 
         bool load(const string &fnp, int db_sections);
 
-        bool loadFromEcgFile(const string &fnp, int sec);
-
         ecgismp nmax(int db_sections) const;
 
         static void append_text(string &s, const string &ann, const char *delim = "; ") {

@@ -10,15 +10,14 @@ import com.tool.sports.com.analysis.ECGLib.PipeLine;
 import com.tool.sports.com.analysis.testdata.TestDataECG;
 
 import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
 import java.util.Calendar;
 import java.util.Vector;
 
-
 public class ProcessAnalysis extends AppCompatActivity {
-    static String TAG = "testtest";
+    static String TAG = "ProcessAnalysis";
     public static CalmAnalysisListener onCalmnessCallback;
+
+    public static SleepAnalysisStatusListener onSleepAnalysisStatusCallback;
     public PipeLine pipeline;
     String mFileName;
 
@@ -29,7 +28,6 @@ public class ProcessAnalysis extends AppCompatActivity {
         mFileName = getFilenameFromTime();
         pipeline = new PipeLine();
         pipeline.init(250, 5);
-
     }
 
     @Override
@@ -39,27 +37,37 @@ public class ProcessAnalysis extends AppCompatActivity {
         Log.d(TAG, "onCreate");
     }
 
-    public void startSleepAnalysis(String _fileName) {
-        ThAnalysis threadSleepAnalysis = new ThAnalysis(_fileName);
+    public void startSleepAnalysis(String _fileName, String _resultFileName) {
+        ThSleepAnalysis threadSleepAnalysis = new ThSleepAnalysis(_fileName, _resultFileName);
         threadSleepAnalysis.ac = this;
         threadSleepAnalysis.start();
-
-        ThAnalysisResult threadSleepResult = new ThAnalysisResult();
-        threadSleepResult.ac = this;
-        threadSleepResult.start();
     }
 
+    public void startSleepAnalysisRealtime(String _resultFileName) {
+
+        ThSleepRealimeAnalysis threadSleepRealtimeAnalysis = new ThSleepRealimeAnalysis(_resultFileName);
+        threadSleepRealtimeAnalysis.ac = this;
+        threadSleepRealtimeAnalysis.start();
+    }
+
+    public void callbackSleepAnalysisStateFromC(int result) {
+        Log.d("callbackResult", "sleep analysis State result:  " + result);
+        if (onSleepAnalysisStatusCallback != null) {
+            onSleepAnalysisStatusCallback.on_finish_sleep_analysis(result);
+            Log.d("callbackResult", "if");
+        }
+    }
 
     public void startCalm() {
         Log.d(TAG, "Calm");
 
-        if (Static1.ncalm == 0) {
-            Static1.ncalm += 1;
+        if (StaticGlobalVar.ncalm == 0) {
+            StaticGlobalVar.ncalm += 1;
 
             ThCalmResult thread = new ThCalmResult();
             thread.ac = this;
             thread.start();
-            if (Static1.isCalmDebug) {
+            if (StaticGlobalVar.isCalmDebug) {
                 startCSVExport();
                 String strCSVSaveDirectory = getCalmSaveDirectory();
                 double[] d = {3, 4};
@@ -71,7 +79,7 @@ public class ProcessAnalysis extends AppCompatActivity {
         }
     }
 
-    public String getFilenameFromTime() {
+    public static String getFilenameFromTime() {
         final Calendar c = Calendar.getInstance();
         int m = c.get(Calendar.MONTH);
         int d = c.get(Calendar.DATE);
@@ -111,6 +119,12 @@ public class ProcessAnalysis extends AppCompatActivity {
         Log.d("callbackTest", "calmness");
         onCalmnessCallback = callbacks;
     }
+
+    public static void setOnSleepAnalysisStatusCallback(SleepAnalysisStatusListener callbacks) {
+        Log.d("callbackTest", "sleepState");
+        onSleepAnalysisStatusCallback = callbacks;
+    }
+
 
     public static String SAVE_DIRECTORY = "Report";
 
@@ -156,12 +170,47 @@ public class ProcessAnalysis extends AppCompatActivity {
     }
 
     public void addEcgDataDouble(double[] fData) {
+
         for (double doubleEcgVal : fData) {
             mEcgArray.add(doubleEcgVal);
             ecg_af_analysis(ecg_No_Transform(doubleEcgVal));
         }
         handler.postDelayed(calmRunnable, 0);
     }
+
+    Vector<Double> mSleepEcgArray = new Vector<>();
+
+    public void addSleepEcgInt(int nEcg, boolean isStop) {
+        if (isStop) AddSleepEcgData(null, true);
+        mSleepEcgArray.add(ecgTransform(nEcg));
+        checkSizeAndAddSleepEcg();
+    }
+
+    public void addSleepEcgInt(int[] arr) {
+        for (int anArr : arr) {
+            mSleepEcgArray.add(ecgTransform(anArr));
+        }
+        checkSizeAndAddSleepEcg();
+    }
+
+    private int mSleepSpeed = 75;
+
+    public void setSleepSpeed(int nSpeed) {
+        this.mSleepSpeed = nSpeed;
+    }
+
+    private void checkSizeAndAddSleepEcg() {
+        int len = mSleepEcgArray.size();
+        if (len >= mSleepSpeed) {
+            double[] arrSleep = new double[mSleepSpeed];
+            for (int i = 0; i < mSleepSpeed; i++) {
+                arrSleep[i] = mSleepEcgArray.firstElement();
+                mSleepEcgArray.remove(0);
+            }
+            AddSleepEcgData(arrSleep, false);
+        }
+    }
+
 
     boolean prevbAF = false;
     int timeOfPrevAF = 0;
@@ -262,17 +311,15 @@ public class ProcessAnalysis extends AppCompatActivity {
         return ret;
     }
 
-    public void callback(String str) {
-        Log.d("callbackResult", "test  " + str);
-    }
 
     public native String cmdline();
 
-    public native void calmnessEntry();
 
     public native String AddEcgData(double[] d, String datapath, String filename);
 
     public native String AddRRIData(double[] d);
+
+    public native void AddSleepEcgData(double[] d, boolean isStop);
 
     public native void initCalmnessInC();
 
@@ -280,10 +327,12 @@ public class ProcessAnalysis extends AppCompatActivity {
 
     public native double HeartRateGetResult();
 
-    //    public native void TestCallback();
     public native String stdouterr();
 
-    public native void analysisFile(String datapath, String filename);
+    public native void analysisFile(String datapath, String filename, String resultFileName);
+
+    public native void analysisRealtimeStart(String datapath, String resultFileName);
+
 //    public native void wfdbExport(String datapath,String filename);
 
     static {
@@ -322,63 +371,35 @@ class ThCalmResult extends Thread {
     }
 }
 
-class ThAnalysis extends Thread {
+class ThSleepAnalysis extends Thread {
     ProcessAnalysis ac;
     String mFileName;
+    String mSleepResultFileName;
 
-    ThAnalysis(String fileName) {
+    ThSleepAnalysis(String fileName, String resultFileName) {
         mFileName = fileName;
+        mSleepResultFileName = resultFileName;
     }
 
     public void run() {
         String strDownload = Environment.getExternalStorageDirectory().getPath();
-        ac.analysisFile("/sdcard/Download/sleepdata", mFileName);//"t_slp01a.txt"
-
-
+        ac.analysisFile(strDownload + "/" + SleepEcgSave.SLEEP_ECG_DIRECTORY, mFileName, mSleepResultFileName);//"t_slp01a.txt"
     }
 }
 
-class ThAnalysisResult extends Thread {
+class ThSleepRealimeAnalysis extends Thread {
     ProcessAnalysis ac;
-    FileOutputStream fos;
+    String mSleepResultFileName;
 
-    String projDir() {
-        String dirPath = "";
-        try {
-            dirPath = ac.getFilesDir().getCanonicalPath();
-        } catch (IOException e) {
-        }
-        File dir2 = new File(dirPath);
-        if (!dir2.exists()) {
-            dir2.mkdirs();
-        }
-        dir2.setWritable(true, false);
-        return dir2.getParent();
+    ThSleepRealimeAnalysis(String resultFileName) {
+        mSleepResultFileName = resultFileName;
     }
 
     public void run() {
-        try {
-            ac.cmdline();
-            for (; ; ) {
-
-                String line = ac.stdouterr();
-//                Log.d("sleepresult", "kkk" + line);
-                if (line.length() > 0) {
-                    Log.d("sleepresult", line);
-                }
-
-                try {
-                    sleep(50);
-                } catch (InterruptedException e) {
-                    Log.e("sleep result error", e.toString());
-                }
-            }
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
+        String strDownload = Environment.getExternalStorageDirectory().getPath();
+        ac.analysisRealtimeStart(strDownload + "/" + SleepEcgSave.SLEEP_ECG_DIRECTORY, mSleepResultFileName);//realtime
     }
 }
-
 
 class ThCalmTester extends Thread {
     ProcessAnalysis ac;
@@ -392,8 +413,13 @@ class ThCalmTester extends Thread {
             }
         }
         Log.d("calmness source length", newData.length + "");
+
         for (int i = 0; i < 1; i++) {
             ac.addEcgDataDouble(newData);
+
+
+//            ac.AddSleepEcgData(newData);
+//            ac.AddSleepEcgData(newData);
             try {
                 sleep(2000);
             } catch (InterruptedException e) {

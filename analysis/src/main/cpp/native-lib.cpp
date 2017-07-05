@@ -3,13 +3,13 @@
 #include <deque>
 #include <iostream>
 #include <iomanip>
-
+#include "common.h"
 
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wmissing-noreturn"
 using namespace std;
 
-int test_ex_ecg_sequential(int argc, char **argv);
+int test_ex_ecg_sequential(int argc, char **argv, bool isFileMode = false);
 
 int wfdb_export(int argc, char **argv);
 
@@ -34,6 +34,8 @@ char *str2ch(std::string str);
 #include "3p_bmdx/src_code_tests/_test_bmdx_unity.h"
 #include "common.h"
 #include "matrix/MyArr.h"
+
+void addEcgSleep(MyArray arr, bool stop = false);
 
 using namespace bmdx;
 namespace {
@@ -125,25 +127,51 @@ Java_com_tool_sports_com_analysis_ProcessAnalysis_stdouterr(
     }
     return env->NewStringUTF(wsToBsUtf8(bsToWs(s)).c_str());
 }
+
 string dp, filename;
+
+extern "C"
+JNIEXPORT void JNICALL
+Java_com_tool_sports_com_analysis_ProcessAnalysis_analysisRealtimeStart(
+        JNIEnv *env, jobject thiz, /* this */       jstring _datapath, jstring _resultFilename) {
+
+    std::string dp = wsToBs(j_wstring(env, _datapath));
+    chdir(dp.c_str());
+    int res1(0);
+
+    try {
+
+        char *chPtr__resultFilename = (char *) env->GetStringUTFChars(_resultFilename,
+                                                                      0); // jstring To std::string
+        char *argv[4] = {(char *) "_", (char *) "realtime(nofile)", chPtr__resultFilename, (char *) "30"};
+        res1 = test_ex_ecg_sequential(4, argv, false); // realtime mode
+        cout << "RETVAL: " << res1 << endl;
+        LOGD("callbackResult %d", res1);
+
+        //Get class from the calling object
+        jclass g_jclass = env->GetObjectClass(thiz);
+        if (!g_jclass) {
+            return;
+        }
+        //Get the methodID from the class which the calling object belongs
+        jmethodID g_jmethod = env->GetMethodID(g_jclass, "callbackSleepAnalysisStateFromC", "(I)V");
+        if (!g_jmethod) {
+            return;
+        }
+        //Call the g_jmethod on the calling object, defined by the methodID
+        jint jResult = res1;
+        env->CallVoidMethod(thiz, g_jmethod, jResult);
+    } catch (...) {}
+}
 
 extern "C"
 JNIEXPORT void JNICALL
 Java_com_tool_sports_com_analysis_ProcessAnalysis_analysisFile(
         JNIEnv *env,
-        jobject, /* this */
-        jstring _datapath, jstring _filename) {
-    LOGE("analysisFile function");
-
+        jobject thiz, /* this */
+        jstring _datapath, jstring _filename, jstring _resultFilename) {
     cout << "Analysis Start: " << unity(d_now()).vcstr() << "\r\n";
     std::string dp = wsToBs(j_wstring(env, _datapath));
-
-    // BEGIN ==================== dir =========================
-    cout << "ls " + dp + ":\r\n";
-    std::string __strSystem = "ls -l ";
-    __strSystem.append(dp);
-    system(__strSystem.c_str());
-    // END   ==================== dir =========================
 
     cout << "chdir(" << dp << "): " << chdir(dp.c_str()) << "\r\n";
     int res1(0);
@@ -151,13 +179,30 @@ Java_com_tool_sports_com_analysis_ProcessAnalysis_analysisFile(
     try {
         char *chPtr_FilePath = (char *) env->GetStringUTFChars(_filename,
                                                                0); // jstring To std::string
-        char *argv[3] = {(char *) "_", chPtr_FilePath, (char *) "30"};
-
-        res1 = test_ex_ecg_sequential(3, argv);
+        char *chPtr__resultFilename = (char *) env->GetStringUTFChars(_resultFilename,
+                                                                      0); // jstring To std::string
+        LOGE("analysisFile function dir: %s, file: %s, result: %s", dp.c_str(), chPtr_FilePath,
+             chPtr__resultFilename);
+        char *argv[4] = {(char *) "_", chPtr_FilePath, chPtr__resultFilename, (char *) "30"};
+        res1 = test_ex_ecg_sequential(4, argv, true); // from file mode
         cout << "RETVAL: " << res1 << endl;
+        LOGD("callbackResult %d", res1);
+
+        //Get class from the calling object
+        jclass g_jclass = env->GetObjectClass(thiz);
+        if (!g_jclass) {
+            return;
+        }
+        //Get the methodID from the class which the calling object belongs
+        jmethodID g_jmethod = env->GetMethodID(g_jclass, "callbackSleepAnalysisStateFromC", "(I)V");
+        if (!g_jmethod) {
+            return;
+        }
+        //Call the g_jmethod on the calling object, defined by the methodID
+        jint jResult = res1;
+        env->CallVoidMethod(thiz, g_jmethod, jResult);
     } catch (...) {}
 }
-
 
 extern "C"
 JNIEXPORT void JNICALL
@@ -184,8 +229,6 @@ Java_com_tool_sports_com_analysis_ProcessAnalysis_wfdbExport(JNIEnv *env,
 //        char *argv[7] = {".\\slp04" ,"|0|ECG",",t_slp04__.txt", "false" ,"true", "true"};
         char *argv[1] = {str2ch(strParam)};
         cout << "===========================\r\n";
-
-
         cout << "RETVAL: " << res1 << endl;
         system(__strSystem.c_str());
 
@@ -349,6 +392,29 @@ void outHeartRate(MyArray arr_RRI) {
     }
 }
 
+
+extern "C"
+JNIEXPORT void JNICALL
+Java_com_tool_sports_com_analysis_ProcessAnalysis_AddSleepEcgData(JNIEnv *env, jobject,
+                                                                  jdoubleArray fArray, jboolean stop) {
+    MyArray ecgSleepData;
+    if(stop){
+        addEcgSleep(ecgSleepData, true); // stop thread( analysis thread) for real time
+        return;
+    }
+    jsize size = env->GetArrayLength(fArray);
+    MyVector vecEcg((unsigned int) size);
+
+    env->GetDoubleArrayRegion(fArray, 0, size, &vecEcg[0]);
+
+
+    for (int i = 0; i < size; i++) {
+        ecgSleepData.push_back(vecEcg.at(i));
+    }
+    addEcgSleep(ecgSleepData);
+}
+
+
 ecg_data g_ecgQueue(250);
 alg_sqrs_nc a1(g_ecgQueue.fd, g_ecgQueue.ecg, g_ecgQueue.beats);
 
@@ -357,6 +423,7 @@ JNIEXPORT void JNICALL
 Java_com_tool_sports_com_analysis_ProcessAnalysis_AddEcgData(JNIEnv *env, jobject,
                                                              jdoubleArray fArray, jstring _jstrPath,
                                                              jstring _jstrfilename) {
+
 
     cout << "add ecg data: " << unity(d_now()).vcstr() << "\r\n";
 
@@ -367,6 +434,7 @@ Java_com_tool_sports_com_analysis_ProcessAnalysis_AddEcgData(JNIEnv *env, jobjec
     MyVector vecEcg((unsigned int) size);
 
     env->GetDoubleArrayRegion(fArray, 0, size, &vecEcg[0]);
+
     saveCSV(vecEcg, dp, filename, FILETYPE_ECG); //ecg
 //    saveSleepEcgCSV(vecEcg, dp, filename); // sleep ecg data
     try {
